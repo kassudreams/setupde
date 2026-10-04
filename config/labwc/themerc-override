@@ -1,0 +1,65 @@
+# setupde theme for labwc - Catppuccin Mocha palette
+# Reference: man 5 labwc-theme
+
+border.width: 2
+window.titlebar.padding.width: 4
+window.titlebar.padding.height: 4
+
+window.active.border.color: #89b4fa
+window.inactive.border.color: #313244
+window.active.indicator.toggled-keybind.color: #f38ba8
+
+window.active.title.bg.color: #1e1e2e
+window.inactive.title.bg.color: #181825
+window.active.label.text.color: #cdd6f4
+window.inactive.label.text.color: #7f849c
+window.label.text.justify: center
+
+window.button.width: 26
+window.button.height: 26
+window.button.spacing: 2
+window.button.hover.bg.color: #45475a
+window.button.hover.bg.corner-radius: 6
+window.active.button.unpressed.image.color: #cdd6f4
+window.inactive.button.unpressed.image.color: #6c7086
+window.active.button.close.unpressed.image.color: #f38ba8
+window.active.button.max.unpressed.image.color: #a6e3a1
+window.active.button.iconify.unpressed.image.color: #f9e2af
+
+window.active.shadow.size: 30
+window.inactive.shadow.size: 20
+window.active.shadow.color: #00000080
+window.inactive.shadow.color: #00000050
+
+menu.width.min: 180
+menu.width.max: 360
+menu.border.width: 2
+menu.border.color: #45475a
+menu.items.bg.color: #1e1e2e
+menu.items.text.color: #cdd6f4
+menu.items.active.bg.color: #89b4fa
+menu.items.active.text.color: #1e1e2e
+menu.items.padding.x: 10
+menu.items.padding.y: 6
+menu.separator.color: #45475a
+menu.separator.padding.height: 4
+menu.title.bg.color: #313244
+menu.title.text.color: #cdd6f4
+
+osd.bg.color: #1e1e2e
+osd.border.color: #89b4fa
+osd.border.width: 2
+osd.label.text.color: #cdd6f4
+osd.window-switcher.style-classic.width: 50%
+osd.window-switcher.style-classic.padding: 8
+osd.window-switcher.style-classic.item.padding.y: 4
+osd.window-switcher.style-classic.item.active.border.color: #89b4fa
+osd.window-switcher.style-classic.item.active.bg.color: #313244
+osd.window-switcher.preview.border.color: #89b4fa
+osd.workspace-switcher.boxes.width: 24
+osd.workspace-switcher.boxes.height: 24
+
+snapping.overlay.region.bg.color: #89b4fa40
+snapping.overlay.edge.bg.color: #89b4fa40
+snapping.overlay.region.border.color: #89b4fa
+snapping.overlay.edge.border.color: #89b4fa

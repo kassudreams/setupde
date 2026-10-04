@@ -1,0 +1,3 @@
+#!/bin/sh
+# Clipboard history picker (Super+V). Needs cliphist running (see autostart).
+cliphist list | fuzzel --dmenu --prompt "Clipboard: " | cliphist decode | wl-copy

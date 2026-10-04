@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Desktop right-click menu. See: man 5 labwc-menu -->
+<openbox_menu>
+
+  <menu id="system-menu" label="System">
+    <item label="Display settings" icon="preferences-desktop-display">
+      <action name="Execute" command="wdisplays" />
+    </item>
+    <item label="Look &amp; feel (GTK)" icon="preferences-desktop-theme">
+      <action name="Execute" command="nwg-look" />
+    </item>
+    <item label="Sound" icon="audio-volume-high">
+      <action name="Execute" command="pavucontrol" />
+    </item>
+    <item label="Network" icon="network-wireless">
+      <action name="Execute" command="nm-connection-editor" />
+    </item>
+    <item label="Bluetooth" icon="bluetooth">
+      <action name="Execute" command="blueman-manager" />
+    </item>
+    <separator />
+    <item label="Edit labwc config" icon="text-editor">
+      <action name="Execute" command="foot -e sh -c '${EDITOR:-vi} ~/.config/labwc/rc.xml'" />
+    </item>
+    <item label="Reload labwc" icon="view-refresh">
+      <action name="Reconfigure" />
+    </item>
+  </menu>
+
+  <menu id="root-menu" label="">
+    <item label="Terminal" icon="utilities-terminal">
+      <action name="Execute" command="foot" />
+    </item>
+    <item label="Files" icon="system-file-manager">
+      <action name="Execute" command="thunar" />
+    </item>
+    <item label="Web browser" icon="web-browser">
+      <action name="Execute" command="firefox" />
+    </item>
+    <item label="Text editor" icon="accessories-text-editor">
+      <action name="Execute" command="mousepad" />
+    </item>
+    <item label="Run…" icon="system-search">
+      <action name="Execute" command="fuzzel" />
+    </item>
+    <separator />
+    <menu id="system-menu" />
+    <separator />
+    <item label="Lock" icon="system-lock-screen">
+      <action name="Execute" command="swaylock -f" />
+    </item>
+    <item label="Power…" icon="system-shutdown">
+      <action name="Execute" command="labwc-powermenu" />
+    </item>
+  </menu>
+
+</openbox_menu>

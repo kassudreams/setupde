@@ -1,0 +1,8 @@
+#!/bin/sh
+# Start a labwc session. Used by greetd/tuigreet, or type `start-labwc` on a TTY.
+# dbus-run-session gives the session its own D-Bus bus (needed for
+# notifications, portals, tray icons, etc. on Void, which has no systemd).
+export XDG_SESSION_TYPE=wayland
+export XDG_CURRENT_DESKTOP=labwc:wlroots
+mkdir -p "$HOME/.local/state"
+exec dbus-run-session labwc "$@" > "$HOME/.local/state/labwc.log" 2>&1

@@ -1,0 +1,102 @@
+/* Waybar style - setupde (Catppuccin Mocha) */
+@define-color base     #1e1e2e;
+@define-color mantle   #181825;
+@define-color surface0 #313244;
+@define-color surface1 #45475a;
+@define-color overlay0 #6c7086;
+@define-color text     #cdd6f4;
+@define-color blue     #89b4fa;
+@define-color green    #a6e3a1;
+@define-color yellow   #f9e2af;
+@define-color peach    #fab387;
+@define-color red      #f38ba8;
+@define-color mauve    #cba6f7;
+@define-color teal     #94e2d5;
+
+* {
+  font-family: "Inter", "Symbols Nerd Font", "Font Awesome 6 Free", sans-serif;
+  font-size: 13px;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+}
+
+window#waybar {
+  background: alpha(@base, 0.92);
+  color: @text;
+  border-radius: 12px;
+  border: 1px solid @surface0;
+}
+
+tooltip {
+  background: @base;
+  border: 1px solid @surface1;
+  border-radius: 8px;
+}
+tooltip label { color: @text; }
+
+#custom-launcher,
+#workspaces,
+#taskbar,
+#clock,
+#tray,
+#idle_inhibitor,
+#pulseaudio,
+#backlight,
+#network,
+#battery,
+#custom-power {
+  background: @surface0;
+  margin: 4px 0;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
+#custom-launcher {
+  margin-left: 4px;
+  color: @blue;
+  font-size: 16px;
+  padding: 0 12px 0 10px;
+}
+
+#workspaces { padding: 0 4px; }
+#workspaces button {
+  color: @overlay0;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: transparent;
+}
+#workspaces button.active { color: @base; background: @blue; }
+#workspaces button.urgent { color: @base; background: @red; }
+#workspaces button:hover  { background: @surface1; color: @text; }
+
+#taskbar { padding: 0 4px; }
+#taskbar.empty { background: transparent; padding: 0; }
+#taskbar button {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: transparent;
+}
+#taskbar button.active { background: @surface1; }
+#taskbar button:hover  { background: @surface1; }
+
+#clock { color: @text; font-weight: bold; }
+
+#idle_inhibitor.activated { color: @yellow; }
+#pulseaudio       { color: @mauve; }
+#pulseaudio.muted { color: @overlay0; }
+#backlight        { color: @yellow; }
+#network          { color: @teal; }
+#network.disconnected { color: @overlay0; }
+#battery          { color: @green; }
+#battery.charging { color: @green; }
+#battery.warning:not(.charging)  { color: @peach; }
+#battery.critical:not(.charging) { color: @base; background: @red; }
+
+#custom-power {
+  margin-right: 4px;
+  color: @red;
+  padding: 0 12px;
+}
+
+#tray > .needs-attention { background: @red; border-radius: 6px; }

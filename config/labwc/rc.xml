@@ -1,0 +1,193 @@
+<?xml version="1.0"?>
+<!--
+  labwc config - setupde
+  Full reference: man 5 labwc-config, man 5 labwc-actions
+  Apply changes without logging out: Super+Shift+R (Reconfigure)
+-->
+<labwc_config>
+
+  <core>
+    <decoration>server</decoration>
+    <gap>8</gap>
+    <adaptiveSync>no</adaptiveSync>
+  </core>
+
+  <placement>
+    <policy>center</policy>
+  </placement>
+
+  <theme>
+    <icon>Papirus-Dark</icon>
+    <fallbackAppIcon>application-x-executable</fallbackAppIcon>
+    <titlebar>
+      <layout>icon:iconify,max,close</layout>
+      <showTitle>yes</showTitle>
+    </titlebar>
+    <cornerRadius>10</cornerRadius>
+    <keepBorder>yes</keepBorder>
+    <dropShadows>yes</dropShadows>
+    <font>
+      <name>Inter</name>
+      <size>10</size>
+    </font>
+    <font place="ActiveWindow">
+      <name>Inter</name>
+      <size>10</size>
+      <weight>bold</weight>
+    </font>
+  </theme>
+
+  <windowSwitcher preview="yes" outlines="yes">
+    <osd show="yes" style="classic" output="focused" />
+    <fields>
+      <field content="icon" width="5%" />
+      <field content="desktop_entry_name" width="30%" />
+      <field content="title" width="65%" />
+    </fields>
+  </windowSwitcher>
+
+  <desktops>
+    <popupTime>600</popupTime>
+    <names>
+      <name>1</name>
+      <name>2</name>
+      <name>3</name>
+      <name>4</name>
+    </names>
+  </desktops>
+
+  <focus>
+    <followMouse>no</followMouse>
+    <raiseOnFocus>no</raiseOnFocus>
+  </focus>
+
+  <snapping>
+    <range inner="10" outer="10" />
+    <overlay enabled="yes">
+      <delay inner="300" outer="300" />
+    </overlay>
+    <topMaximize>yes</topMaximize>
+  </snapping>
+
+  <regions>
+    <region name="top-left"     x="0%"  y="0%"  height="50%"  width="50%"  />
+    <region name="top"          x="0%"  y="0%"  height="50%"  width="100%" />
+    <region name="top-right"    x="50%" y="0%"  height="50%"  width="50%"  />
+    <region name="left"         x="0%"  y="0%"  height="100%" width="50%"  />
+    <region name="center"       x="10%" y="10%" height="80%"  width="80%"  />
+    <region name="right"        x="50%" y="0%"  height="100%" width="50%"  />
+    <region name="bottom-left"  x="0%"  y="50%" height="50%"  width="50%"  />
+    <region name="bottom"       x="0%"  y="50%" height="50%"  width="100%" />
+    <region name="bottom-right" x="50%" y="50%" height="50%"  width="50%"  />
+  </regions>
+
+  <keyboard>
+    <!-- Load labwc's defaults (Alt-Tab, Super+arrows snapping, ...) then add/override -->
+    <default />
+    <numlock>on</numlock>
+    <repeatRate>30</repeatRate>
+    <repeatDelay>300</repeatDelay>
+
+    <!-- Apps -->
+    <keybind key="W-Return"><action name="Execute" command="foot" /></keybind>
+    <keybind key="W-space"><action name="Execute" command="fuzzel" /></keybind>
+    <keybind key="W-r"><action name="Execute" command="fuzzel" /></keybind>
+    <keybind key="W-e"><action name="Execute" command="thunar" /></keybind>
+    <keybind key="W-b"><action name="Execute" command="firefox" /></keybind>
+    <keybind key="W-v"><action name="Execute" command="labwc-clipboard" /></keybind>
+    <keybind key="W-l"><action name="Execute" command="swaylock -f" /></keybind>
+    <keybind key="W-Escape"><action name="Execute" command="labwc-powermenu" /></keybind>
+    <keybind key="C-A-Delete"><action name="Execute" command="labwc-powermenu" /></keybind>
+    <keybind key="W-n"><action name="Execute" command="makoctl dismiss --all" /></keybind>
+
+    <!-- Screenshots (saved to ~/Pictures/Screenshots and copied to clipboard) -->
+    <keybind key="Print"><action name="Execute" command="labwc-screenshot area" /></keybind>
+    <keybind key="S-Print"><action name="Execute" command="labwc-screenshot full" /></keybind>
+    <keybind key="C-Print"><action name="Execute" command="labwc-screenshot edit" /></keybind>
+
+    <!-- Windows -->
+    <keybind key="W-q"><action name="Close" /></keybind>
+    <keybind key="W-f"><action name="ToggleFullscreen" /></keybind>
+    <keybind key="W-m"><action name="ToggleMaximize" /></keybind>
+    <keybind key="W-h"><action name="Iconify" /></keybind>
+    <keybind key="W-t"><action name="ToggleAlwaysOnTop" /></keybind>
+    <keybind key="W-Tab"><action name="NextWindow" /></keybind>
+    <keybind key="W-S-Tab"><action name="PreviousWindow" /></keybind>
+    <keybind key="W-c">
+      <action name="SnapToRegion" region="center" />
+    </keybind>
+
+    <!-- Numpad snapping: Super + numpad 1-9 -->
+    <keybind key="W-KP_7"><action name="SnapToRegion" region="top-left" /></keybind>
+    <keybind key="W-KP_8"><action name="SnapToRegion" region="top" /></keybind>
+    <keybind key="W-KP_9"><action name="SnapToRegion" region="top-right" /></keybind>
+    <keybind key="W-KP_4"><action name="SnapToRegion" region="left" /></keybind>
+    <keybind key="W-KP_5"><action name="SnapToRegion" region="center" /></keybind>
+    <keybind key="W-KP_6"><action name="SnapToRegion" region="right" /></keybind>
+    <keybind key="W-KP_1"><action name="SnapToRegion" region="bottom-left" /></keybind>
+    <keybind key="W-KP_2"><action name="SnapToRegion" region="bottom" /></keybind>
+    <keybind key="W-KP_3"><action name="SnapToRegion" region="bottom-right" /></keybind>
+
+    <!-- Workspaces -->
+    <keybind key="W-1"><action name="GoToDesktop" to="1" /></keybind>
+    <keybind key="W-S-1"><action name="SendToDesktop" to="1" follow="no" /></keybind>
+    <keybind key="W-2"><action name="GoToDesktop" to="2" /></keybind>
+    <keybind key="W-S-2"><action name="SendToDesktop" to="2" follow="no" /></keybind>
+    <keybind key="W-3"><action name="GoToDesktop" to="3" /></keybind>
+    <keybind key="W-S-3"><action name="SendToDesktop" to="3" follow="no" /></keybind>
+    <keybind key="W-4"><action name="GoToDesktop" to="4" /></keybind>
+    <keybind key="W-S-4"><action name="SendToDesktop" to="4" follow="no" /></keybind>
+    <keybind key="W-C-Left"><action name="GoToDesktop" to="left" /></keybind>
+    <keybind key="W-C-Right"><action name="GoToDesktop" to="right" /></keybind>
+    <keybind key="W-S-Left"><action name="SendToDesktop" to="left" /></keybind>
+    <keybind key="W-S-Right"><action name="SendToDesktop" to="right" /></keybind>
+
+    <!-- Session -->
+    <keybind key="W-S-r"><action name="Reconfigure" /></keybind>
+    <keybind key="W-S-e"><action name="Exit" /></keybind>
+
+    <!-- Media keys (PipeWire / WirePlumber) -->
+    <keybind key="XF86AudioRaiseVolume">
+      <action name="Execute" command="wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+" />
+    </keybind>
+    <keybind key="XF86AudioLowerVolume">
+      <action name="Execute" command="wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-" />
+    </keybind>
+    <keybind key="XF86AudioMute">
+      <action name="Execute" command="wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle" />
+    </keybind>
+    <keybind key="XF86AudioMicMute">
+      <action name="Execute" command="wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle" />
+    </keybind>
+    <keybind key="XF86AudioPlay"><action name="Execute" command="playerctl play-pause" /></keybind>
+    <keybind key="XF86AudioPause"><action name="Execute" command="playerctl play-pause" /></keybind>
+    <keybind key="XF86AudioNext"><action name="Execute" command="playerctl next" /></keybind>
+    <keybind key="XF86AudioPrev"><action name="Execute" command="playerctl previous" /></keybind>
+    <keybind key="XF86MonBrightnessUp">
+      <action name="Execute" command="brightnessctl set +5%" />
+    </keybind>
+    <keybind key="XF86MonBrightnessDown">
+      <action name="Execute" command="brightnessctl set 5%-" />
+    </keybind>
+  </keyboard>
+
+  <mouse>
+    <default />
+    <!-- Left/right click on the desktop: app menu. Middle click: window list -->
+    <context name="Root">
+      <mousebind button="Middle" action="Press">
+        <action name="ShowMenu" menu="client-list-combined-menu" />
+      </mousebind>
+    </context>
+  </mouse>
+
+  <libinput>
+    <device category="touchpad">
+      <tap>yes</tap>
+      <naturalScroll>yes</naturalScroll>
+      <disableWhileTyping>yes</disableWhileTyping>
+      <clickMethod>clickfinger</clickMethod>
+    </device>
+  </libinput>
+
+</labwc_config>

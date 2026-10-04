@@ -1,0 +1,17 @@
+#!/bin/sh
+# Power menu using fuzzel. Bound to Super+Esc and the waybar ⏻ button.
+choice=$(printf '%s\n' \
+	"  Lock" \
+	"󰍃  Log out" \
+	"󰤄  Suspend" \
+	"  Reboot" \
+	"⏻  Shut down" |
+	fuzzel --dmenu --prompt "Power: " --lines 5 --width 22)
+
+case "$choice" in
+	*Lock)      swaylock -f ;;
+	*"Log out") labwc --exit ;;
+	*Suspend)   swaylock -f && loginctl suspend ;;
+	*Reboot)    loginctl reboot ;;
+	*"Shut down") loginctl poweroff ;;
+esac

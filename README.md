@@ -1,0 +1,155 @@
+# setupde: labwc desktop for Void Linux
+
+This turns a fresh (or nearly fresh) Void Linux install into a full, good-looking
+desktop based on the [labwc](https://labwc.github.io) Wayland compositor. Everything
+uses one dark colour theme (Catppuccin Mocha).
+
+| Part            | Program                                             |
+|-----------------|-----------------------------------------------------|
+| Compositor      | labwc (+ Xwayland for X11 apps)                     |
+| Panel           | Waybar: launcher, workspaces, taskbar, clock, tray, volume, brightness, network, battery, power |
+| App launcher    | fuzzel                                              |
+| Terminal        | foot                                                |
+| Notifications   | mako                                                |
+| Lock / idle     | swaylock + swayidle (locks after 5 min, screen off after 10 min) |
+| Wallpaper       | swaybg                                              |
+| Night light     | wlsunset (warmer colours from 20:00 to 07:00)       |
+| Audio           | PipeWire + WirePlumber (pavucontrol for settings)   |
+| Network         | NetworkManager + nm-applet                          |
+| Bluetooth       | bluez + blueman                                     |
+| Files           | Thunar (+ gvfs, udisks2, thumbnails, archives)      |
+| Screenshots     | grim + slurp (+ swappy for annotating)              |
+| Clipboard       | cliphist history (Super+V)                          |
+| Login screen    | greetd + tuigreet                                   |
+| Settings GUIs   | wdisplays (monitors), nwg-look (GTK theme), pavucontrol |
+| Apps            | Firefox, Mousepad, imv (images), mpv (video)        |
+| Look            | Adwaita-dark GTK, Papirus-Dark icons, Inter + Noto + Nerd Font symbols |
+
+## Before you start
+
+You need a working Void install with:
+
+* a normal user account that can use `sudo` (the installer's "add user to wheel" option
+  plus the `%wheel` line in `visudo`)
+* a working internet connection
+* `git` to clone this repo: `sudo xbps-install -S git`
+
+Works with both glibc and musl. With an NVIDIA card you'll need the nouveau driver,
+or extra setup for the proprietary driver, which this repo doesn't cover.
+
+## Install
+
+```sh
+git clone https://github.com/kassudreams/setupde.git
+cd setupde
+./install.sh
+sudo reboot
+```
+
+After the reboot you get a login screen. Log in and labwc starts.
+
+### Options
+
+```
+./install.sh --layout=fi          # set the keyboard layout (default: KEYMAP from /etc/rc.conf)
+./install.sh --no-greetd          # no login screen; log in on a TTY and run: start-labwc
+./install.sh --no-bluetooth       # skip bluetooth
+./install.sh --no-networkmanager  # keep dhcpcd / wpa_supplicant as they are
+./install.sh --configs-only       # only (re)install the dotfiles + scripts
+./install.sh -y                   # don't ask for confirmation
+```
+
+You can run the script again safely. Any of your config files it would overwrite get
+backed up to `~/.config/setupde-backup-<date>/` first.
+
+### What the installer changes on the system
+
+* Updates the system, then installs the packages listed at the top of `install.sh`
+* Enables these runit services: `dbus`, `elogind`, `NetworkManager`, `bluetoothd`, `greetd`
+* Disables `dhcpcd` and `wpa_supplicant` so NetworkManager can manage the network.
+  **Your connection may drop near the end of the install.** Reconnect with `nmtui`,
+  or with the tray icon once you're in labwc.
+* Disables `seatd` and `acpid` if they're enabled, because they conflict with elogind
+* Sets up PipeWire the Void way (`/etc/pipewire/pipewire.conf.d`, `/etc/alsa/conf.d`)
+* Writes `/etc/greetd/config.toml` (the login screen runs on tty7, so tty1-6 still work)
+* Adds your user to the `video`, `network` and `bluetooth` groups
+* Copies the helper scripts to `/usr/local/bin`
+
+## Keyboard shortcuts
+
+`Super` is the Windows key.
+
+| Keys                         | Action                                   |
+|------------------------------|------------------------------------------|
+| `Super+Space` / `Super+R`    | App launcher                             |
+| `Super+Enter`                | Terminal                                 |
+| `Super+E`                    | File manager                             |
+| `Super+B`                    | Firefox                                  |
+| `Super+V`                    | Clipboard history                        |
+| `Super+Q` / `Alt+F4`         | Close window                             |
+| `Super+F`                    | Fullscreen                               |
+| `Super+M` / `Super+A`        | Maximize                                 |
+| `Super+H`                    | Minimize                                 |
+| `Super+T`                    | Always on top                            |
+| `Super+C`                    | Center window (80% size)                 |
+| `Super+←/→/↑/↓`              | Snap to half of the screen               |
+| `Super+Numpad 1-9`           | Snap to a quarter, half or center        |
+| `Alt+Tab` / `Super+Tab`      | Switch windows                           |
+| `Super+1..4`                 | Go to workspace 1-4                      |
+| `Super+Shift+1..4`           | Move window to workspace 1-4             |
+| `Super+Ctrl+←/→`             | Previous/next workspace                  |
+| `Super+Shift+←/→`            | Move window to previous/next workspace   |
+| `Super+D`                    | Show desktop                             |
+| `Super+N`                    | Dismiss notifications                    |
+| `Print`                      | Screenshot of an area                    |
+| `Shift+Print`                | Screenshot of the whole screen           |
+| `Ctrl+Print`                 | Screenshot of an area, then annotate it  |
+| `Super+L`                    | Lock screen                              |
+| `Super+Esc` / `Ctrl+Alt+Del` | Power menu (lock, log out, suspend, reboot, shut down) |
+| `Super+Shift+R`              | Reload labwc config                      |
+| `Super+Shift+E`              | Log out                                  |
+| `Alt+Shift`                  | Switch keyboard layout (if you set two)  |
+
+Mouse: left- or right-click the desktop for the menu, middle-click it for a window
+list, scroll on it to switch workspaces. `Super+drag` moves a window and
+`Super+right-drag` resizes it.
+
+Screenshots are saved to `~/Pictures/Screenshots` and copied to the clipboard.
+
+## Customising
+
+All the configs live in `~/.config`:
+
+| File                                  | What                                       |
+|---------------------------------------|--------------------------------------------|
+| `labwc/rc.xml`                        | Shortcuts, gaps, touchpad, workspaces      |
+| `labwc/menu.xml`                      | Desktop right-click menu                   |
+| `labwc/autostart`                     | What starts with the session               |
+| `labwc/environment`                   | Keyboard layout, cursor, toolkit settings  |
+| `labwc/themerc-override`              | Window border, titlebar and menu colours   |
+| `waybar/config.jsonc`, `style.css`    | Panel                                      |
+| `fuzzel/fuzzel.ini`                   | Launcher                                   |
+| `foot/foot.ini`                       | Terminal                                   |
+| `mako/config`                         | Notifications                              |
+| `swaylock/config`                     | Lock screen                                |
+
+* **Wallpaper:** copy an image to `~/.config/labwc/wallpaper` (no file extension), then log out and back in.
+* **Keyboard layout:** edit `XKB_DEFAULT_LAYOUT` in `~/.config/labwc/environment`.
+  For two layouts use `us,fi`, then switch with `Alt+Shift`.
+* **Monitors:** run `wdisplays` to arrange them. To keep the layout, make a
+  [kanshi](https://sr.ht/~emersion/kanshi/) config and add `kanshi &` to autostart.
+* **Reload:** `Super+Shift+R` reloads the labwc files. Waybar and mako need a
+  logout, or `pkill waybar; waybar &`.
+
+## Troubleshooting
+
+* **labwc doesn't start:** look in `~/.local/state/labwc.log`. Check that your user is
+  in the `video` group (`groups`) and that the `elogind` and `dbus` services are running
+  (`sudo sv status dbus elogind`).
+* **No sound:** run `wpctl status`. PipeWire starts from labwc's autostart, so it only
+  runs inside the labwc session.
+* **No network after the install:** run `nmtui` and connect again.
+* **Screen sharing doesn't work in the browser:** make sure the `xdg-desktop-portal-wlr`
+  package is installed, then log out and back in.
+* **Login screen loops back:** switch to a TTY with `Ctrl+Alt+F2`, log in and run
+  `start-labwc`. Any error appears in `~/.local/state/labwc.log`.

@@ -1,0 +1,25 @@
+# mako notifications - setupde (Catppuccin Mocha). Reference: man 5 mako
+font=Inter 11
+icons=1
+icon-path=/usr/share/icons/Papirus-Dark
+max-icon-size=48
+anchor=top-right
+margin=12
+padding=12
+width=360
+border-size=2
+border-radius=12
+background-color=#1e1e2ef2
+text-color=#cdd6f4
+border-color=#89b4fa
+progress-color=over #45475a
+default-timeout=6000
+max-visible=5
+group-by=app-name
+
+[urgency=low]
+border-color=#45475a
+
+[urgency=critical]
+border-color=#f38ba8
+default-timeout=0

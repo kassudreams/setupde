@@ -1,0 +1,21 @@
+# Environment for the labwc session. See: man 5 labwc-config (ENVIRONMENT)
+
+# Keyboard layout (install.sh fills this in; change it any time, then log out/in)
+# Examples: us, fi, de, gb, se   |   two layouts: XKB_DEFAULT_LAYOUT=us,fi
+XKB_DEFAULT_LAYOUT=us
+# Toggle between layouts with Alt+Shift
+XKB_DEFAULT_OPTIONS=grp:alt_shift_toggle
+
+# Cursor
+XCURSOR_THEME=Adwaita
+XCURSOR_SIZE=24
+
+# Prefer native Wayland in toolkits/apps
+MOZ_ENABLE_WAYLAND=1
+QT_QPA_PLATFORM=wayland;xcb
+QT_QPA_PLATFORMTHEME=gtk3
+ELECTRON_OZONE_PLATFORM_HINT=auto
+_JAVA_AWT_WM_NONREPARENTING=1
+
+# Default terminal for lab-sensible-terminal and some apps
+TERMINAL=foot
