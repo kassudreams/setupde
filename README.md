@@ -34,8 +34,17 @@ You need a working Void install with:
 * a working internet connection
 * `git` to clone this repo: `sudo xbps-install -S git`
 
-Works with both glibc and musl. With an NVIDIA card you'll need the nouveau driver,
-or extra setup for the proprietary driver, which this repo doesn't cover.
+Works with both glibc and musl.
+
+**Graphics cards:** `install.sh` detects your GPU and installs the right driver:
+
+* **AMD / Intel:** the open-source Mesa drivers, with Vulkan and video decoding
+* **NVIDIA:** the proprietary `nvidia` driver from Void's nonfree repo (595.x, open kernel
+  modules, so Turing / RTX 20 series or newer), with kernel modesetting turned on
+  for Wayland. The modules are built with DKMS, so the first install takes a few minutes.
+* **CPU graphics + NVIDIA card** (for example a Ryzen 7000 with an RTX card): labwc uses
+  the NVIDIA card, where your monitor is plugged in. To use a different one, set
+  `WLR_DRM_DEVICES=/dev/dri/cardN` in `/usr/local/bin/start-labwc`.
 
 ## Install
 
@@ -90,9 +99,9 @@ This sets Void up for gaming, similar to CachyOS or PikaOS:
 | What | Details |
 |---|---|
 | Steam + Proton | Enables the `nonfree` and `multilib` repos and installs Steam with all the 32-bit libraries it needs, plus the controller udev rules |
-| GPU drivers | Detects your GPU. AMD gets RADV Vulkan (64 + 32-bit), VA-API and CoreCtrl. Intel gets ANV Vulkan and VA-API. NVIDIA isn't handled (install `nvidia nvidia-libs-32bit` yourself) |
+| GPU drivers | Detects your GPU. AMD gets RADV Vulkan (64 + 32-bit), VA-API and CoreCtrl. Intel gets ANV Vulkan and VA-API. NVIDIA gets the proprietary driver with 32-bit libraries and NVDEC video decoding |
 | Game tools | gamemode, MangoHud (`Right Shift+F12` toggles it), gamescope, ProtonPlus (for GE-Proton), protontricks, Lutris, Wine + winetricks |
-| Newer kernel | `linux-mainline` (7.x, fully preemptible, with sched_ext) becomes the default boot entry. The old kernel stays in GRUB as a fallback |
+| Newer kernel | `linux-mainline` (7.x, fully preemptible, with sched_ext) becomes the default boot entry. The old kernel stays in GRUB as a fallback. **Skipped with NVIDIA**, because the driver may not build for the newest kernel yet. Use `--kernel` to install it anyway |
 | CPU scheduler | `scx_lavd`, the gaming-focused sched_ext scheduler CachyOS offers, runs as a runit service. Change it in `/etc/sv/scx/conf` |
 | Memory | zram compressed swap (`zramen`), and `earlyoom` so running out of RAM closes the biggest app instead of freezing the PC |
 | Tweaks | `vm.max_map_count` raised (needed by many Proton games), split-lock slowdown turned off, best IO scheduler per disk, higher file limits for esync |

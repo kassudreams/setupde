@@ -51,6 +51,10 @@ PKGS_LOOK=(
 PKGS_NM=(NetworkManager network-manager-applet)
 PKGS_BT=(bluez blueman libspa-bluetooth)
 PKGS_GREETD=(greetd tuigreet)
+# GPU drivers, picked by detect_gpus
+PKGS_GPU_AMD=(mesa-vulkan-radeon mesa-vaapi)
+PKGS_GPU_INTEL=(mesa-vulkan-intel intel-video-accel)
+PKGS_GPU_NVIDIA=(nvidia linux-headers)
 
 # ---------------------------------------------------------------- helpers
 c_blue=$'\e[1;34m'; c_yellow=$'\e[1;33m'; c_red=$'\e[1;31m'; c_off=$'\e[0m'
@@ -98,6 +102,19 @@ install_file() {
 	cp "$src" "$dst"
 }
 
+# Detect GPU vendors from sysfs: prints amd / intel / nvidia (one per line)
+detect_gpus() {
+	local v
+	for v in /sys/class/drm/card*/device/vendor; do
+		[ -r "$v" ] || continue
+		case "$(cat "$v")" in
+			0x1002) echo amd ;;
+			0x8086) echo intel ;;
+			0x10de) echo nvidia ;;
+		esac
+	done | sort -u
+}
+
 detect_layout() {
 	local km=""
 	if [ -r /etc/rc.conf ]; then
@@ -131,6 +148,7 @@ command -v xbps-install >/dev/null || die "this script is for Void Linux (xbps-i
 command -v sudo >/dev/null || die "sudo is required (as root: xbps-install sudo; visudo to allow the wheel group)"
 
 [ -n "$LAYOUT" ] || LAYOUT="$(detect_layout)"
+GPUS="$(detect_gpus | tr '\n' ' ')"
 
 cat <<EOF
 
@@ -138,6 +156,7 @@ cat <<EOF
   -------------------------------------
   user:            $USER
   keyboard layout: $LAYOUT
+  GPU(s) found:    ${GPUS:-none detected}
   packages:        $( [ "$CONFIGS_ONLY" -eq 1 ] && echo no || echo yes )
   NetworkManager:  $( [ "$WANT_NM" -eq 1 ] && echo yes || echo no )
   bluetooth:       $( [ "$WANT_BLUETOOTH" -eq 1 ] && echo yes || echo no )
@@ -163,6 +182,21 @@ if [ "$CONFIGS_ONLY" -eq 0 ]; then
 	[ "$WANT_NM" -eq 1 ]        && pkgs+=("${PKGS_NM[@]}")
 	[ "$WANT_BLUETOOTH" -eq 1 ] && pkgs+=("${PKGS_BT[@]}")
 	[ "$WANT_GREETD" -eq 1 ]    && pkgs+=("${PKGS_GREETD[@]}")
+	case " $GPUS " in *" amd "*)   pkgs+=("${PKGS_GPU_AMD[@]}") ;; esac
+	case " $GPUS " in *" intel "*) pkgs+=("${PKGS_GPU_INTEL[@]}") ;; esac
+	case " $GPUS " in *" nvidia "*)
+		step "NVIDIA GPU found: setting up the proprietary driver"
+		# The driver lives in the nonfree repo
+		xbps -Sy void-repo-nonfree
+		xbps -S
+		# Kernel modesetting is required for Wayland. Written before the
+		# driver is installed so the initramfs built by its DKMS trigger
+		# picks it up.
+		sudo mkdir -p /etc/modprobe.d
+		echo "options nvidia_drm modeset=1 fbdev=1" | sudo tee /etc/modprobe.d/nvidia-drm.conf >/dev/null
+		echo "    /etc/modprobe.d/nvidia-drm.conf"
+		pkgs+=("${PKGS_GPU_NVIDIA[@]}")
+	esac
 
 	step "Installing packages"
 	xbps -y "${pkgs[@]}"

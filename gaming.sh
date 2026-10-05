@@ -7,6 +7,8 @@
 # Options:
 #     -y, --yes        don't ask for confirmation
 #     --no-kernel      keep the default kernel (no linux-mainline + sched_ext scheduler)
+#     --kernel         install linux-mainline even with an NVIDIA GPU (off by default
+#                      there, since the NVIDIA driver may not build for the newest kernel)
 #     --no-flatpak     don't set up Flatpak / Flathub
 #     -h, --help       show this help
 
@@ -17,6 +19,7 @@ CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 ASSUME_YES=0
 WANT_KERNEL=1
+KERNEL_FORCED=0
 WANT_FLATPAK=1
 
 # ---------------------------------------------------------------- packages
@@ -36,6 +39,7 @@ PKGS_32BIT=(
 )
 PKGS_AMD=(mesa-vulkan-radeon mesa-vulkan-radeon-32bit mesa-vaapi corectrl radeontop)
 PKGS_INTEL=(mesa-vulkan-intel mesa-vulkan-intel-32bit intel-video-accel)
+PKGS_NVIDIA=(nvidia nvidia-libs-32bit linux-headers nvidia-vaapi-driver)
 PKGS_KERNEL=(linux-mainline scx)
 
 # ---------------------------------------------------------------- helpers
@@ -44,7 +48,7 @@ step() { printf '\n%s==>%s %s\n' "$c_blue" "$c_off" "$*"; }
 warn() { printf '%s!!%s  %s\n' "$c_yellow" "$c_off" "$*"; }
 die()  { printf '%sxx%s  %s\n' "$c_red" "$c_off" "$*" >&2; exit 1; }
 
-usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
+usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }
 
 # xbps-install exits 17 when everything asked for is already installed
 xbps() {
@@ -82,6 +86,7 @@ for arg in "$@"; do
 	case "$arg" in
 		-y|--yes) ASSUME_YES=1 ;;
 		--no-kernel) WANT_KERNEL=0 ;;
+		--kernel) WANT_KERNEL=1; KERNEL_FORCED=1 ;;
 		--no-flatpak) WANT_FLATPAK=0 ;;
 		-h|--help) usage ;;
 		*) die "unknown option: $arg (see --help)" ;;
@@ -95,6 +100,14 @@ command -v xbps-install >/dev/null || die "this script is for Void Linux (xbps-i
 	die "Steam needs 64-bit glibc Void (x86_64). This system is $(xbps-uhelper arch)."
 
 GPUS="$(detect_gpus | tr '\n' ' ')"
+HAS_NVIDIA=0
+case " $GPUS " in *" nvidia "*) HAS_NVIDIA=1 ;; esac
+
+# The NVIDIA driver is an out-of-tree module (DKMS) that often lags behind
+# the newest kernel, so keep the default kernel unless asked otherwise.
+if [ "$HAS_NVIDIA" -eq 1 ] && [ "$KERNEL_FORCED" -eq 0 ]; then
+	WANT_KERNEL=0
+fi
 
 cat <<EOF
 
@@ -108,10 +121,10 @@ cat <<EOF
 
 EOF
 
-case " $GPUS " in *" nvidia "*)
-	warn "NVIDIA GPU found. This script sets up AMD/Intel (Mesa) drivers only."
-	warn "For NVIDIA install the proprietary driver yourself: nvidia nvidia-libs-32bit"
-esac
+if [ "$HAS_NVIDIA" -eq 1 ] && [ "$WANT_KERNEL" -eq 0 ] && [ "$KERNEL_FORCED" -eq 0 ]; then
+	warn "NVIDIA GPU: keeping the default kernel so the NVIDIA driver keeps working."
+	warn "(Use --kernel to install linux-mainline + scx_lavd anyway.)"
+fi
 
 if [ "$ASSUME_YES" -eq 0 ]; then
 	read -r -p "Continue? [Y/n] " ans
@@ -130,7 +143,10 @@ xbps -yu
 pkgs=("${PKGS_GAMING[@]}" "${PKGS_32BIT[@]}")
 case " $GPUS " in *" amd "*)   pkgs+=("${PKGS_AMD[@]}") ;; esac
 case " $GPUS " in *" intel "*) pkgs+=("${PKGS_INTEL[@]}") ;; esac
+[ "$HAS_NVIDIA" -eq 1 ]   && pkgs+=("${PKGS_NVIDIA[@]}")
 [ "$WANT_KERNEL" -eq 1 ]  && pkgs+=("${PKGS_KERNEL[@]}")
+# DKMS needs headers for every installed kernel
+[ "$WANT_KERNEL" -eq 1 ] && [ "$HAS_NVIDIA" -eq 1 ] && pkgs+=(linux-mainline-headers)
 [ "$WANT_FLATPAK" -eq 1 ] && pkgs+=(flatpak)
 
 # Skip anything the repos don't have (instead of failing the whole install)
@@ -143,6 +159,12 @@ for p in "${pkgs[@]}"; do
 		warn "package $p is not in the repositories, skipping it"
 	fi
 done
+
+if [ "$HAS_NVIDIA" -eq 1 ] && [ ! -e /etc/modprobe.d/nvidia-drm.conf ]; then
+	# Kernel modesetting is required for Wayland (install.sh normally does this)
+	sudo mkdir -p /etc/modprobe.d
+	echo "options nvidia_drm modeset=1 fbdev=1" | sudo tee /etc/modprobe.d/nvidia-drm.conf >/dev/null
+fi
 
 step "Installing gaming packages (this is a big download)"
 xbps -y "${avail[@]}"
