@@ -169,7 +169,13 @@ if [ "$CONFIGS_ONLY" -eq 0 ]; then
 
 	step "Enabling base services"
 	enable_sv dbus
-	enable_sv elogind
+	# elogind is started on demand by dbus. Don't also run it as a runit
+	# service: the service races dbus activation at boot (e.g. when
+	# NetworkManager asks for logind) and then loops forever printing
+	# "elogind is already running as PID ...".
+	if [ -e /var/service/elogind ]; then
+		disable_sv elogind
+	fi
 	# elogind and these conflict over seats / power keys
 	for sv in seatd acpid; do
 		if [ -e "/var/service/$sv" ]; then

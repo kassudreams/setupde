@@ -65,7 +65,8 @@ backed up to `~/.config/setupde-backup-<date>/` first.
 ### What the installer changes on the system
 
 * Updates the system, then installs the packages listed at the top of `install.sh`
-* Enables these runit services: `dbus`, `elogind`, `NetworkManager`, `bluetoothd`, `greetd`
+* Enables these runit services: `dbus`, `NetworkManager`, `bluetoothd`, `greetd`.
+  elogind is started on demand by dbus, not as its own service, because the two race at boot
 * Disables `dhcpcd` and `wpa_supplicant` so NetworkManager can manage the network.
   **Your connection may drop near the end of the install.** Reconnect with `nmtui`,
   or with the tray icon once you're in labwc.
@@ -191,8 +192,10 @@ All the configs live in `~/.config`:
   harmless.
 
 * **labwc doesn't start:** look in `~/.local/state/labwc.log`. Check that your user is
-  in the `video` group (`groups`) and that the `elogind` and `dbus` services are running
-  (`sudo sv status dbus elogind`).
+  in the `video` group (`groups`), that the `dbus` service is running
+  (`sudo sv status dbus`) and that elogind is running (`pgrep -a elogind`).
+* **Console spam `elogind is already running as PID ...`:** the elogind runit service is
+  enabled and racing dbus. Run `sudo rm /var/service/elogind` and reboot.
 * **No sound:** run `wpctl status`. PipeWire starts from labwc's autostart, so it only
   runs inside the labwc session.
 * **No network after the install:** run `nmtui` and connect again.
