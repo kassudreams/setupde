@@ -169,6 +169,27 @@ fi
 step "Installing gaming packages (this is a big download)"
 xbps -y "${avail[@]}"
 
+# With NVIDIA, the newest kernel is only safe if the driver built for it.
+# Otherwise it would boot to a black screen, so take it out again.
+if [ "$WANT_KERNEL" -eq 1 ] && [ "$HAS_NVIDIA" -eq 1 ]; then
+	step "Checking that the NVIDIA driver built for linux-mainline"
+	mainline_pkg="$(xbps-query -x linux-mainline 2>/dev/null | sed -n 's/^\(linux[0-9.]*\)>=.*/\1/p' | head -n1)"
+	kver=""
+	[ -n "$mainline_pkg" ] && kver="$(xbps-query -f "$mainline_pkg" 2>/dev/null |
+		sed -n 's|^/usr/lib/modules/\([^/]*\)/.*|\1|p' | head -n1)"
+	if [ -n "$kver" ] && ! find "/usr/lib/modules/$kver" -name 'nvidia.ko*' 2>/dev/null | grep -q .; then
+		sudo dkms autoinstall -k "$kver" || true
+	fi
+	if [ -n "$kver" ] && find "/usr/lib/modules/$kver" -name 'nvidia.ko*' 2>/dev/null | grep -q .; then
+		echo "    NVIDIA driver is built for $kver"
+	else
+		warn "The NVIDIA driver could not be built for ${kver:-linux-mainline}."
+		warn "Removing linux-mainline again so you don't boot to a black screen."
+		sudo xbps-remove -Ry linux-mainline linux-mainline-headers || true
+		WANT_KERNEL=0
+	fi
+fi
+
 # ---------------------------------------------------------------- tweaks
 step "Installing system tweaks"
 sudo install -m 644 "$REPO_DIR/system/99-gaming.conf"        /etc/sysctl.d/99-gaming.conf

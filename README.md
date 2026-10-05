@@ -186,6 +186,13 @@ All the configs live in `~/.config`:
 
 ## Troubleshooting
 
+* **MediaTek MT7927 Wi‑Fi 7 / Bluetooth** (on many X870 boards, for example MSI and ASUS;
+  Bluetooth shows up as USB ID `0489:e110`): Linux only supports this card from
+  kernel 7.x. Run `./gaming.sh --kernel` to install `linux-mainline`, which makes Wi‑Fi work.
+  Bluetooth also needs a firmware file (`mediatek/mt7927/BT_RAM_CODE_MT6639_*`) that isn't in
+  linux-firmware yet, so it won't work until that's released. A USB Bluetooth dongle works
+  in the meantime.
+
 * **Boot hangs for a minute with `usb 1-12: device descriptor read/64, error -110`:**
   a USB device on that port isn't answering, and the kernel keeps retrying it. That's
   where the time goes. To fix it:
