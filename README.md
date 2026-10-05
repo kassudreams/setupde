@@ -192,6 +192,9 @@ All the configs live in `~/.config`:
   Bluetooth also needs a firmware file (`mediatek/mt7927/BT_RAM_CODE_MT6639_*`) that isn't in
   linux-firmware yet, so it won't work until that's released. A USB Bluetooth dongle works
   in the meantime.
+  Known issue on kernel 7.2: Wi‑Fi can say *connected* while no traffic gets through (seen
+  with an iPhone hotspot). The MT7927 driver is very new, so check again after kernel updates
+  (`sudo xbps-install -Su`).
 
 * **Boot hangs for a minute with `usb 1-12: device descriptor read/64, error -110`:**
   a USB device on that port isn't answering, and the kernel keeps retrying it. That's
