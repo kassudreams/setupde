@@ -1,3 +1,4 @@
 # Run when labwc exits: stop things started from autostart
 pkill -u "$USER" -x swayidle
 pkill -u "$USER" -x wlsunset
+pkill -u "$USER" -x kanshi

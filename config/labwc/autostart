@@ -5,6 +5,9 @@
 # itself via /etc/pipewire/pipewire.conf.d, set up by install.sh)
 pgrep -u "$USER" -x pipewire >/dev/null || pipewire >/dev/null 2>&1 &
 
+# Monitor resolution / refresh rate / scale (~/.config/kanshi/config)
+kanshi >/dev/null 2>&1 &
+
 # Wallpaper: put an image at ~/.config/labwc/wallpaper (any jpg/png) to use it
 if [ -f "$HOME/.config/labwc/wallpaper" ]; then
 	swaybg -m fill -i "$HOME/.config/labwc/wallpaper" >/dev/null 2>&1 &

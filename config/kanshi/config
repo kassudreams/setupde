@@ -1,0 +1,11 @@
+# Monitor setup - kanshi applies this when labwc starts and on hotplug.
+# Reference: man 5 kanshi
+#
+# "*" means "whatever port the monitor is on". To target a specific monitor,
+# run `wlr-randr` to see its name (e.g. DP-1, HDMI-A-1) and use that instead.
+# If the monitor doesn't offer this exact mode, labwc's default is kept.
+# Apply changes without logging out:  pkill kanshi; kanshi &
+
+profile main {
+	output * mode 3840x2160@119.880Hz scale 2.6
+}

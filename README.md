@@ -163,12 +163,14 @@ All the configs live in `~/.config`:
 | `foot/foot.ini`                       | Terminal                                   |
 | `mako/config`                         | Notifications                              |
 | `swaylock/config`                     | Lock screen                                |
+| `kanshi/config`                       | Monitor resolution, refresh rate, scale    |
 
 * **Wallpaper:** copy an image to `~/.config/labwc/wallpaper` (no file extension), then log out and back in.
 * **Keyboard layout:** edit `XKB_DEFAULT_LAYOUT` in `~/.config/labwc/environment`.
   For two layouts use `us,fi`, then switch with `Alt+Shift`.
-* **Monitors:** run `wdisplays` to arrange them. To keep the layout, make a
-  [kanshi](https://sr.ht/~emersion/kanshi/) config and add `kanshi &` to autostart.
+* **Monitors:** resolution, refresh rate and scale are set in `~/.config/kanshi/config`.
+  The default is 3840x2160 at 119.88 Hz with 2.6 scaling. Use `wdisplays` to try out
+  settings, then put the ones you want in the kanshi config so they stick.
 * **Reload:** `Super+Shift+R` reloads the labwc files. Waybar and mako need a
   logout, or `pkill waybar; waybar &`.
 
