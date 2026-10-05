@@ -75,6 +75,37 @@ backed up to `~/.config/setupde-backup-<date>/` first.
 * Adds your user to the `video`, `network` and `bluetooth` groups
 * Copies the helper scripts to `/usr/local/bin`
 
+## Gaming (optional)
+
+After `install.sh`, run:
+
+```sh
+./gaming.sh
+sudo reboot
+```
+
+This sets Void up for gaming, similar to CachyOS or PikaOS:
+
+| What | Details |
+|---|---|
+| Steam + Proton | Enables the `nonfree` and `multilib` repos and installs Steam with all the 32-bit libraries it needs, plus the controller udev rules |
+| GPU drivers | Detects your GPU. AMD gets RADV Vulkan (64 + 32-bit), VA-API and CoreCtrl. Intel gets ANV Vulkan and VA-API. NVIDIA isn't handled (install `nvidia nvidia-libs-32bit` yourself) |
+| Game tools | gamemode, MangoHud (`Right Shift+F12` toggles it), gamescope, ProtonPlus (for GE-Proton), protontricks, Lutris, Wine + winetricks |
+| Newer kernel | `linux-mainline` (7.x, fully preemptible, with sched_ext) becomes the default boot entry. The old kernel stays in GRUB as a fallback |
+| CPU scheduler | `scx_lavd`, the gaming-focused sched_ext scheduler CachyOS offers, runs as a runit service. Change it in `/etc/sv/scx/conf` |
+| Memory | zram compressed swap (`zramen`), and `earlyoom` so running out of RAM closes the biggest app instead of freezing the PC |
+| Tweaks | `vm.max_map_count` raised (needed by many Proton games), split-lock slowdown turned off, best IO scheduler per disk, higher file limits for esync |
+| Flatpak | Adds Flathub, for Heroic (Epic/GOG), Discord and other apps |
+
+Options: `--no-kernel` keeps the default kernel, `--no-flatpak` skips Flatpak, `-y` doesn't ask for confirmation.
+
+To use gamemode and MangoHud in Steam, set a game's launch options (right-click the game, then
+Properties) to:
+
+```
+gamemoderun mangohud %command%
+```
+
 ## Keyboard shortcuts
 
 `Super` is the Windows key.
@@ -142,6 +173,20 @@ All the configs live in `~/.config`:
   logout, or `pkill waybar; waybar &`.
 
 ## Troubleshooting
+
+* **Boot hangs for a minute with `usb 1-12: device descriptor read/64, error -110`:**
+  a USB device on that port isn't answering, and the kernel keeps retrying it. That's
+  where the time goes. To fix it:
+  1. Shut down and switch the PSU off for 30 seconds. Stuck devices, often the
+     motherboard's internal Bluetooth, usually come back after this.
+  2. Unplug USB devices one at a time, including hubs, dongles and RGB/AIO cables on
+     internal headers, until the error goes away. If it's something you don't use,
+     disable it in the BIOS.
+  3. If it can't be fixed, make each retry shorter by adding
+     `usbcore.initial_descriptor_timeout=1000` to `GRUB_CMDLINE_LINUX_DEFAULT` in
+     `/etc/default/grub`, then run `sudo update-grub`.
+  `amdgpu ... Failed to detect connector` and `hub ... doesn't have any ports` are
+  harmless.
 
 * **labwc doesn't start:** look in `~/.local/state/labwc.log`. Check that your user is
   in the `video` group (`groups`) and that the `elogind` and `dbus` services are running

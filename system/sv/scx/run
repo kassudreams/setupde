@@ -1,0 +1,9 @@
+#!/bin/sh
+# runit service for sched_ext schedulers (setupde)
+exec 2>&1
+[ -r ./conf ] && . ./conf
+if [ ! -d /sys/kernel/sched_ext ]; then
+	echo "this kernel has no sched_ext support (boot linux-mainline); idling"
+	exec sleep infinity
+fi
+exec "${SCX_SCHEDULER:-scx_lavd}" ${SCX_FLAGS}

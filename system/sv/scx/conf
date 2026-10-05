@@ -1,0 +1,6 @@
+# sched_ext CPU scheduler (like CachyOS). Needs the linux-mainline kernel.
+# scx_lavd   - built for gaming / interactivity (default)
+# scx_bpfland - good all-rounder for desktop use
+# After changing:  sudo sv restart scx
+SCX_SCHEDULER=scx_lavd
+SCX_FLAGS=""

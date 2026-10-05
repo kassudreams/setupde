@@ -298,4 +298,6 @@ cat <<'EOF'
   Super+Q      close window    Super+Esc    power menu   Print    screenshot
   Right-click the desktop for the menu. See README.md for all shortcuts.
 
+  Want Steam and gaming tweaks too? Run ./gaming.sh next.
+
 EOF
