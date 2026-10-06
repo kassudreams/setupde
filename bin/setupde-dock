@@ -185,10 +185,12 @@ app_classes() {
 icon() {
 	local f c
 	f="$(desktop_file "$1")" || return
-	# Running -> print nothing, waybar hides the launcher and the taskbar shows it
+	# Running -> hide the launcher (the taskbar part of the dock shows it).
+	# waybar only hides an image when its path doesn't exist; empty output
+	# would keep the old icon, so print a path that can't exist.
 	if [ -s "$RUNNING" ]; then
 		while IFS= read -r c; do
-			[ -n "$c" ] && grep -qxF "$c" "$RUNNING" && return 0
+			[ -n "$c" ] && grep -qxF "$c" "$RUNNING" && { echo "/nonexistent/hidden"; return 0; }
 		done < <(app_classes "$f" "$1" | sort -u)
 	fi
 	icon_path "$(desktop_key "$f" Icon)"
