@@ -193,6 +193,9 @@ if [ "$WANT_PACKAGES" -eq 1 ]; then
 		done
 		sudo apt-get install -y "${deps[@]}" || true
 		sudo apt-get build-dep -y hyprland >/dev/null 2>&1 || true
+		# hyprbars includes <lua.h>; Debian keeps it in /usr/include/lua5.5
+		CXXFLAGS="-O2 $(pkg-config --cflags lua5.5 2>/dev/null || echo -I/usr/include/lua5.5)"
+		export CXXFLAGS
 		if hyprpm update && { hyprpm list 2>/dev/null | grep -q hyprland-plugins ||
 				printf 'y\n' | hyprpm add https://github.com/hyprwm/hyprland-plugins; } &&
 				hyprpm enable hyprbars && hyprpm reload; then
