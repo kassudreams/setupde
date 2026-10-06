@@ -177,7 +177,7 @@ if [ "$WANT_PACKAGES" -eq 1 ]; then
 		# Everything Hyprland 0.56's CMake checks for (hyprpm configures the
 		# Hyprland source to get its headers). Missing ones are skipped.
 		HYPR_BUILD_DEPS=(
-			glslang-dev hyprwayland-scanner
+			glslang-dev glslang-tools hyprwayland-scanner
 			libaquamarine-dev libhyprlang-dev libhyprcursor-dev libhyprutils-dev libhyprgraphics-dev
 			libxkbcommon-dev uuid-dev libwayland-dev wayland-protocols
 			libcairo2-dev libpango1.0-dev libpixman-1-dev libxcursor-dev libdrm-dev
