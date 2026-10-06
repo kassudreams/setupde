@@ -256,6 +256,8 @@ while IFS= read -r -d '' src; do
 	echo "    $rel"
 done < <(find "$REPO_DIR/config" -type f -print0 | sort -z)
 chmod +x "$CONFIG_HOME/labwc/autostart" "$CONFIG_HOME/labwc/shutdown"
+[ -e "$CONFIG_HOME/labwc/wallpaper" ] ||
+	cp "$REPO_DIR/wallpapers/catppuccin-floaty.jpg" "$CONFIG_HOME/labwc/wallpaper"
 
 if [ ! -e "/usr/share/X11/xkb/symbols/${LAYOUT%%,*}" ]; then
 	warn "keyboard layout '$LAYOUT' not found in xkb, falling back to 'us'"

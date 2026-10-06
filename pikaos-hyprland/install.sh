@@ -186,6 +186,10 @@ fi
 for w in "$HYPR_BACKUP"/wallpaper.*; do
 	[ -f "$w" ] && cp "$w" "$CONFIG_HOME/hypr/wallpaper" && break
 done 2>/dev/null || true
+# Otherwise use the setupde wallpaper
+if [ ! -e "$CONFIG_HOME/hypr/wallpaper" ]; then
+	cp "$REPO_DIR/wallpapers/catppuccin-floaty.jpg" "$CONFIG_HOME/hypr/wallpaper"
+fi
 echo "    ~/.config/hypr (keyboard layout: $LAYOUT)"
 
 # ---------------------------------------------------------------- other configs

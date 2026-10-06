@@ -223,7 +223,8 @@ All the configs live in `~/.config`:
 | `swaylock/config`                     | Lock screen                                |
 | `kanshi/config`                       | Monitor resolution, refresh rate, scale    |
 
-* **Wallpaper:** copy an image to `~/.config/labwc/wallpaper` (no file extension), then log out and back in.
+* **Wallpaper:** the installer sets `wallpapers/catppuccin-floaty.jpg`. To use your own, copy an image over
+  `~/.config/labwc/wallpaper` (or `~/.config/hypr/wallpaper` on PikaOS), then log out and back in.
 * **Keyboard layout:** edit `XKB_DEFAULT_LAYOUT` in `~/.config/labwc/environment`.
   For two layouts use `us,fi`, then switch with `Alt+Shift`.
 * **Monitors:** resolution, refresh rate and scale are set in `~/.config/kanshi/config`.
