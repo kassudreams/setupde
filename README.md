@@ -276,6 +276,11 @@ setupde-fireface          # set up (AES = output channels 9-10, the UCX II defau
 setupde-fireface test 9   # tone on channel 9 (left), then 10 (right)
 ```
 
+Which playback channels reach the AES output depends on the Fireface's own routing. On one UCX II in
+CC mode it was **channels 3-4** (`playback_AUX2` / `playback_AUX3` in qpwgraph), so use
+`setupde-fireface setup 3` there. Patching in qpwgraph by hand works too, but it's lost when
+PipeWire restarts. `setup N` makes it permanent.
+
 It switches the card to PipeWire's *Pro Audio* profile, creates a stereo **"Genelec 8330A (AES)"**
 output mapped to the AES channels and makes it the default (the panel's volume controls it),
 stops the card from suspending (otherwise the monitors lose the digital signal and click when
