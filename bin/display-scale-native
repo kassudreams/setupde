@@ -1,0 +1,3 @@
+#!/bin/sh
+# Lutris pre-launch script: native resolution for games
+exec display-scale 1

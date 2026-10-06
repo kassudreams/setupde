@@ -116,6 +116,21 @@ Properties) to:
 gamemoderun mangohud %command%
 ```
 
+### Games at full resolution with a scaled desktop
+
+X11 games (Wine, Proton, Lutris, Battle.net, most of Steam) only see the *scaled* screen size.
+At scale 2.6 a 4K monitor looks like 1477x831 to them, so 3840x2160 doesn't show up in the
+game's settings. The fix is to switch to scale 1 while playing:
+
+* **Manually:** `Super+F12` switches between scale 1 and your normal scale.
+* **Automatically in Lutris:** right-click the game, choose *Configure*, then *System options*
+  (turn on *Advanced* at the top) and set:
+  * *Pre-launch script*: `/usr/local/bin/display-scale-native`
+  * *Post-exit script*: `/usr/local/bin/display-scale-restore`
+* **In Steam:** set the launch options to `display-scale 1; %command%; display-scale default`.
+
+After switching to scale 1, pick 3840x2160 and fullscreen in the game's display settings.
+
 ## Keyboard shortcuts
 
 `Super` is the Windows key.
@@ -142,6 +157,7 @@ gamemoderun mangohud %command%
 | `Super+Shift+←/→`            | Move window to previous/next workspace   |
 | `Super+D`                    | Show desktop                             |
 | `Super+N`                    | Dismiss notifications                    |
+| `Super+F12`                  | Toggle display scale between 1 and normal (for games) |
 | `Print`                      | Screenshot of an area                    |
 | `Shift+Print`                | Screenshot of the whole screen           |
 | `Ctrl+Print`                 | Screenshot of an area, then annotate it  |

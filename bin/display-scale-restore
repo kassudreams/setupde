@@ -1,0 +1,3 @@
+#!/bin/sh
+# Lutris post-exit script: back to the normal desktop scale
+exec display-scale default

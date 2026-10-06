@@ -99,6 +99,8 @@
     <keybind key="W-Escape"><action name="Execute" command="labwc-powermenu" /></keybind>
     <keybind key="C-A-Delete"><action name="Execute" command="labwc-powermenu" /></keybind>
     <keybind key="W-n"><action name="Execute" command="makoctl dismiss --all" /></keybind>
+    <!-- Toggle display scale 1 <-> normal (native 4K for X11 games) -->
+    <keybind key="W-F12"><action name="Execute" command="display-scale toggle" /></keybind>
 
     <!-- Screenshots (saved to ~/Pictures/Screenshots and copied to clipboard) -->
     <keybind key="Print"><action name="Execute" command="labwc-screenshot area" /></keybind>

@@ -1,0 +1,34 @@
+#!/bin/sh
+# Change the display scale of all screens.
+#   display-scale 1          native pixels (for games, see README)
+#   display-scale default    back to the scale in ~/.config/kanshi/config
+#   display-scale toggle     switch between the two (Super+F12)
+#   display-scale 1.5        any other scale
+#
+# Why: X11 games (Wine/Proton, Lutris, Steam) only see the *scaled* screen
+# size, so at scale 2.6 a 4K monitor looks like 1477x831 to them.
+
+default=$(sed -n 's/.*[[:space:]]scale[[:space:]]\{1,\}\([0-9.]\{1,\}\).*/\1/p' \
+	"${XDG_CONFIG_HOME:-$HOME/.config}/kanshi/config" 2>/dev/null | head -n1)
+[ -n "$default" ] || default=1
+
+# "NAME current-scale" for every enabled output
+outputs=$(wlr-randr | awk '
+	/^[^ ]/       { name = $1; enabled = 0 }
+	/Enabled: yes/ { enabled = 1 }
+	/Scale:/ && enabled { print name, $2 }')
+[ -n "$outputs" ] || { echo "display-scale: no outputs found" >&2; exit 1; }
+
+case "${1:-toggle}" in
+	default) scale=$default ;;
+	toggle)
+		current=$(echo "$outputs" | awk 'NR==1 { print $2 + 0 }')
+		if [ "$current" = 1 ]; then scale=$default; else scale=1; fi ;;
+	*[!0-9.]*|"") echo "usage: display-scale [SCALE|default|toggle]" >&2; exit 1 ;;
+	*) scale=$1 ;;
+esac
+
+echo "$outputs" | while read -r name _; do
+	wlr-randr --output "$name" --scale "$scale"
+done
+notify-send -t 2000 "Display scale" "$scale" 2>/dev/null || true
