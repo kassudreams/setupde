@@ -185,6 +185,7 @@ if [ "$WANT_PACKAGES" -eq 1 ]; then
 			liblcms2-dev liblua5.5-dev libgles-dev libegl-dev libopengl-dev libudis86-dev
 			libxcb1-dev libxcb-render0-dev libxcb-xfixes0-dev libxcb-icccm4-dev
 			libxcb-composite0-dev libxcb-res0-dev libxcb-errors-dev
+			libhyprwire-dev hyprwire-dev libreadline-dev libtomlplusplus-dev libglaze-dev
 		)
 		deps=()
 		for p in "${HYPR_BUILD_DEPS[@]}"; do
