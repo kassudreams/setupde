@@ -58,6 +58,9 @@ hl.config({
 		disable_splash_rendering = true,
 		background_color         = rgba(C.base),
 		focus_on_activate        = true,
+		-- PikaOS's session sets XDG_CURRENT_DESKTOP=pika-hyprland on purpose
+		-- (it picks PikaOS's portal settings), so don't warn about it
+		disable_xdg_env_checks   = true,
 	},
 
 	-- X11 apps (Wine/Proton games, Battle.net, Steam) render at native pixels
