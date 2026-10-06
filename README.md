@@ -66,6 +66,22 @@ Config files in `~/.config/hypr`: `monitors.lua`, `input.lua` (keyboard), `look.
 borders, blur, animations), `windows.lua` (floating rules, cascading, workspace modes, blur on panels), `keybinds.lua`,
 `autostart.sh` (panel, tray, idle). Hyprland reloads the Lua files as soon as you save them.
 
+**The panel** (PikaOS layout):
+
+| Part | What it does |
+|---|---|
+| Left | launcher, workspaces, open windows |
+| Middle | **dock**: click an icon to start the app, right-click to unpin it, **+** (or `Super+Shift+Space`) to pin an app from the app list. The list lives in `~/.config/setupde/dock.list` (edit or reorder it, then run `setupde-dock build`) |
+| Right | tray, **CPU load + temperature, GPU load + temperature, memory, power draw**, night light, screen-awake toggle, volume, network, **clock + calendar**, power menu |
+
+* **Power draw** adds CPU power (from the processor's RAPL energy counter) and GPU power
+  (`nvidia-smi`). The rest of the PC isn't measured, so expect roughly 30-60 W more at the wall.
+  The installer makes the RAPL counter readable with `/etc/tmpfiles.d/setupde-rapl.conf`
+* **Night light** (moon icon): click for a popup with an on/off switch and **warmth** and
+  **brightness** sliders, right-click to toggle. It uses `hyprsunset`, and brightness is a software
+  dimmer, so it works on TVs too. Settings are remembered
+* Clicking CPU opens `btop`, clicking GPU opens `nvtop`
+
 **After PikaOS updates Hyprland** the title bars disappear until the plugin is rebuilt for the new
 version. Run `setupde-rebuild-plugins`.
 

@@ -20,6 +20,7 @@ local browser = first_installed({ "firefox", "chromium", "google-chrome-stable",
 hl.bind(mod .. " + Return",       exec("foot"))
 hl.bind(mod .. " + space",        exec("fuzzel"))
 hl.bind(mod .. " + R",            exec("fuzzel"))
+hl.bind(mod .. " + SHIFT + space", exec("setupde-dock pin"))   -- pin an app to the dock
 hl.bind(mod .. " + E",            exec("thunar"))
 hl.bind(mod .. " + B",            exec(browser))
 hl.bind(mod .. " + V",            exec("setupde-clipboard"))

@@ -14,7 +14,8 @@ if command -v hyprpm >/dev/null; then
 	{ hyprpm reload -n && hyprctl reload; } >/dev/null 2>&1 &
 fi
 
-# Panel and notifications
+# Panel (the dock in its middle is generated first) and notifications
+command -v setupde-dock >/dev/null && setupde-dock build
 waybar >/dev/null 2>&1 &
 mako >/dev/null 2>&1 &
 
@@ -38,8 +39,8 @@ command -v nm-applet >/dev/null && nm-applet --indicator >/dev/null 2>&1 &
 # Clipboard history (Super+V)
 command -v cliphist >/dev/null && wl-paste --watch cliphist store >/dev/null 2>&1 &
 
-# Night light (warmer colours from 20:00 to 07:00). Remove if you don't want it.
-command -v wlsunset >/dev/null && wlsunset -t 4000 -T 6500 -S 07:00 -s 20:00 >/dev/null 2>&1 &
+# Night light + brightness with your saved settings (moon icon in the panel)
+command -v setupde-nightlight >/dev/null && setupde-nightlight restore
 
 # Idle: lock after 5 min, screen off after 10 min, lock before suspend
 swayidle -w \

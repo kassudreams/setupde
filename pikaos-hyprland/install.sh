@@ -36,6 +36,7 @@ PKGS=(
 	fonts-inter fonts-noto-color-emoji fonts-dejavu-core
 	papirus-icon-theme adwaita-icon-theme
 	xdg-utils curl xz-utils fontconfig
+	hyprsunset python3-gi gir1.2-gtk-3.0 libgtk-3-bin btop nvtop
 )
 
 c_blue=$'\e[1;34m'; c_yellow=$'\e[1;33m'; c_red=$'\e[1;31m'; c_off=$'\e[0m'
@@ -210,7 +211,8 @@ fi
 
 # ---------------------------------------------------------------- scripts
 step "Installing helper scripts to /usr/local/bin"
-for f in setupde-powermenu setupde-screenshot setupde-clipboard setupde-rebuild-plugins; do
+for f in setupde-powermenu setupde-screenshot setupde-clipboard setupde-rebuild-plugins \
+         setupde-dock setupde-sysinfo setupde-nightlight; do
 	sudo install -m 755 "$REPO_DIR/bin/$f" /usr/local/bin/
 	echo "    $f"
 done
@@ -249,11 +251,41 @@ echo "    ~/.config/hypr (keyboard layout: $LAYOUT)"
 
 # ---------------------------------------------------------------- other configs
 step "Installing app configs (shared with the labwc setup)"
-for rel in waybar/config.jsonc waybar/style.css fuzzel/fuzzel.ini foot/foot.ini \
-           mako/config swaylock/config gtk-3.0/settings.ini; do
+for rel in fuzzel/fuzzel.ini foot/foot.ini mako/config swaylock/config gtk-3.0/settings.ini; do
 	install_file "$REPO_DIR/config/$rel" "$CONFIG_HOME/$rel"
 	echo "    $rel"
 done
+
+# Waybar: PikaOS layout (dock in the middle, hardware info, clock on the right)
+install_file "$HERE/waybar/style.css" "$CONFIG_HOME/waybar/style.css"
+# CPU temperature sensor: AMD k10temp / Intel coretemp, else the first thermal zone
+cpu_temp='"thermal-zone": 0,'
+for hw in /sys/class/hwmon/hwmon*; do
+	case "$(cat "$hw/name" 2>/dev/null)" in
+		k10temp|coretemp|zenpower)
+			dev="$(readlink -f "$hw/device")"
+			cpu_temp="\"hwmon-path-abs\": \"$dev/hwmon\", \"input-filename\": \"temp1_input\","
+			break ;;
+	esac
+done
+tmp_cfg="$(mktemp)"
+sed "s|@CPU_TEMP_SOURCE@|$cpu_temp|" "$HERE/waybar/config.jsonc" > "$tmp_cfg"
+install_file "$tmp_cfg" "$CONFIG_HOME/waybar/config.jsonc"
+rm -f "$tmp_cfg"
+echo "    waybar/config.jsonc, waybar/style.css"
+
+# Dock: default pinned apps on first install, then generate it
+command -v setupde-dock >/dev/null && setupde-dock build >/dev/null 2>&1 || true
+
+# Let the panel read CPU power (RAPL energy counter is root-only by default).
+# Note: this also lets programs estimate CPU activity from power use; remove
+# /etc/tmpfiles.d/setupde-rapl.conf if that matters to you.
+if [ -e /sys/class/powercap/intel-rapl:0/energy_uj ]; then
+	echo 'z /sys/class/powercap/intel-rapl:0/energy_uj 0444 root root -' |
+		sudo tee /etc/tmpfiles.d/setupde-rapl.conf >/dev/null
+	sudo systemd-tmpfiles --create /etc/tmpfiles.d/setupde-rapl.conf 2>/dev/null || true
+	echo "    CPU power readable by the panel (/etc/tmpfiles.d/setupde-rapl.conf)"
+fi
 install_file "$REPO_DIR/config/gtk-3.0/settings.ini" "$CONFIG_HOME/gtk-4.0/settings.ini"
 
 if command -v gsettings >/dev/null; then

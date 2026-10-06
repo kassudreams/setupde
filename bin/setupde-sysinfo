@@ -1,0 +1,82 @@
+#!/bin/bash
+# Hardware info for waybar (prints waybar JSON).
+#   setupde-sysinfo gpu     GPU load + temperature (NVIDIA via nvidia-smi, AMD via sysfs)
+#   setupde-sysinfo power   CPU + GPU power draw in watts
+#
+# CPU power comes from the processor's RAPL energy counter
+# (/sys/class/powercap/intel-rapl:0, also used by AMD Ryzen). It's only
+# readable by root unless install.sh's tmpfiles rule made it readable.
+# There's no sensor for the whole PC, so the rest (board, RAM, disks, fans)
+# isn't included.
+
+state="${XDG_RUNTIME_DIR:-/tmp}/setupde-rapl"
+
+json() { # text tooltip class
+	printf '{"text": "%s", "tooltip": "%s", "class": "%s"}\n' "$1" "$2" "${3:-}"
+}
+
+nvidia() { # fields -> csv line or nothing
+	command -v nvidia-smi >/dev/null &&
+		nvidia-smi --query-gpu="$1" --format=csv,noheader,nounits 2>/dev/null | head -n1 | sed 's/, */,/g'
+}
+
+amd_gpu_dir() {
+	local c
+	for c in /sys/class/drm/card*/device; do
+		[ "$(cat "$c/vendor" 2>/dev/null)" = 0x1002 ] && [ -r "$c/gpu_busy_percent" ] && { echo "$c"; return; }
+	done
+}
+
+gpu() {
+	local line load temp name dir
+	line="$(nvidia "utilization.gpu,temperature.gpu,name")"
+	if [ -n "$line" ]; then
+		IFS=, read -r load temp name <<<"$line"
+	elif dir="$(amd_gpu_dir)" && [ -n "$dir" ]; then
+		load="$(cat "$dir/gpu_busy_percent")"
+		temp="$(cat "$dir"/hwmon/hwmon*/temp1_input 2>/dev/null | head -n1)"
+		temp=$(( ${temp:-0} / 1000 ))
+		name="AMD GPU"
+	else
+		json "" "No GPU info available"; return
+	fi
+	local class=""
+	[ "${temp:-0}" -ge 80 ] && class=hot
+	json "󰢮 ${load}% ${temp}°C" "${name}\\nLoad: ${load}%\\nTemperature: ${temp}°C" "$class"
+}
+
+cpu_watts() { # average package power since the last call
+	local f=/sys/class/powercap/intel-rapl:0/energy_uj now t prev_e prev_t
+	[ -r "$f" ] || return 1
+	now="$(cat "$f")" || return 1
+	t="$(date +%s%N)"
+	if [ -r "$state" ]; then
+		read -r prev_e prev_t < "$state"
+	fi
+	echo "$now $t" > "$state"
+	[ -n "${prev_e:-}" ] && [ "$now" -ge "$prev_e" ] && [ "$t" -gt "$prev_t" ] || return 1
+	# microjoules / nanoseconds * 1000 = watts
+	echo $(( (now - prev_e) * 1000 / (t - prev_t) ))
+}
+
+power() {
+	local cpu gpu total tip
+	cpu="$(cpu_watts)"
+	gpu="$(nvidia "power.draw")"
+	gpu="${gpu%%.*}"
+	if [ -z "$cpu" ] && [ -z "$gpu" ]; then
+		json "" "No power sensors readable"; return
+	fi
+	total=$(( ${cpu:-0} + ${gpu:-0} ))
+	tip="CPU: ${cpu:-n/a} W\\nGPU: ${gpu:-n/a} W"
+	[ -r /sys/class/powercap/intel-rapl:0/energy_uj ] ||
+		tip="$tip\\n(CPU power not readable - rerun install.sh)"
+	tip="$tip\\n\\nOnly CPU + GPU are measured; the whole PC\\nuses roughly 30-60 W more at the wall."
+	json "⚡ ${total} W" "$tip"
+}
+
+case "${1:-}" in
+	gpu) gpu ;;
+	power) power ;;
+	*) echo "usage: $0 gpu|power" >&2; exit 1 ;;
+esac

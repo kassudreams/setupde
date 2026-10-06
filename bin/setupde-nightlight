@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+"""Night light + screen brightness for Hyprland, using hyprsunset.
+
+  setupde-nightlight            open the popup (toggle + sliders)
+  setupde-nightlight toggle     night light on/off (right-click in waybar)
+  setupde-nightlight status     waybar JSON
+  setupde-nightlight restore    start hyprsunset with the saved settings (autostart)
+
+Brightness is a software dimmer (gamma), so it works on any screen,
+including TVs that don't support brightness control from the PC.
+Settings are saved in ~/.config/setupde/nightlight.json.
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+
+CONF = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+                    "setupde", "nightlight.json")
+DEFAULTS = {"enabled": False, "temperature": 4000, "brightness": 100}
+WAYBAR_SIGNAL = 8  # "signal": 8 in the waybar module
+
+
+def load():
+    try:
+        with open(CONF) as f:
+            return {**DEFAULTS, **json.load(f)}
+    except (OSError, ValueError):
+        return dict(DEFAULTS)
+
+
+def save(state):
+    os.makedirs(os.path.dirname(CONF), exist_ok=True)
+    with open(CONF, "w") as f:
+        json.dump(state, f)
+
+
+def hyprsunset_running():
+    return subprocess.run(["pgrep", "-x", "hyprsunset"], capture_output=True).returncode == 0
+
+
+def start_hyprsunset(state):
+    subprocess.run(["pkill", "-x", "hyprsunset"], capture_output=True)
+    args = ["hyprsunset", "-g", str(state["brightness"])]
+    args += ["-t", str(state["temperature"])] if state["enabled"] else ["-i"]
+    subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True)
+    time.sleep(0.3)
+
+
+def apply(state):
+    """Send the settings to the running hyprsunset (start it if needed)."""
+    if not shutil.which("hyprsunset"):
+        return
+    if not hyprsunset_running():
+        start_hyprsunset(state)
+        return
+    ctl = ["hyprctl", "hyprsunset"]
+    if state["enabled"]:
+        subprocess.run(ctl + ["temperature", str(state["temperature"])], capture_output=True)
+    else:
+        subprocess.run(ctl + ["identity"], capture_output=True)
+    subprocess.run(ctl + ["gamma", str(state["brightness"])], capture_output=True)
+
+
+def refresh_waybar():
+    subprocess.run(["pkill", f"-RTMIN+{WAYBAR_SIGNAL}", "-x", "waybar"], capture_output=True)
+
+
+def status():
+    s = load()
+    icon = "\U000F0594" if s["enabled"] else "\U000F05A8"  # md weather-night / lightbulb-outline
+    tip = (f"Night light: {'on' if s['enabled'] else 'off'} ({s['temperature']} K)\n"
+           f"Brightness: {s['brightness']}%\n\nClick: settings   Right-click: on/off")
+    print(json.dumps({"text": icon, "tooltip": tip, "class": "on" if s["enabled"] else "off"}, ensure_ascii=False))
+
+
+def toggle():
+    s = load()
+    s["enabled"] = not s["enabled"]
+    save(s)
+    apply(s)
+    refresh_waybar()
+
+
+def popup():
+    import gi
+    gi.require_version("Gtk", "3.0")
+    from gi.repository import Gtk, Gdk, GLib
+
+    GLib.set_prgname("setupde-nightlight")  # Wayland app id, for the window rule
+    state = load()
+    pending = {"id": None}
+
+    def changed(*_):
+        state["enabled"] = switch.get_active()
+        state["temperature"] = int(temp.get_value()) // 100 * 100
+        state["brightness"] = int(bright.get_value())
+        temp.set_sensitive(state["enabled"])
+        save(state)
+        # apply at most every 80 ms while dragging
+        if pending["id"] is None:
+            def run():
+                pending["id"] = None
+                apply(state)
+                refresh_waybar()
+                return False
+            pending["id"] = GLib.timeout_add(80, run)
+
+    win = Gtk.Window(title="Night light")
+    win.set_default_size(340, -1)
+    win.set_resizable(False)
+    win.connect("destroy", Gtk.main_quit)
+    win.connect("key-press-event",
+                lambda w, e: e.keyval == Gdk.KEY_Escape and w.destroy())
+    win.connect("focus-out-event", lambda w, e: w.destroy())
+
+    css = Gtk.CssProvider()
+    css.load_from_data(b"""
+        window { background: #1e1e2e; color: #cdd6f4; }
+        .title { font-weight: bold; font-size: 13pt; }
+        .dim { color: #a6adc8; }
+        scale trough { background: #313244; min-height: 6px; border-radius: 3px; }
+        scale highlight { background: #89b4fa; border-radius: 3px; }
+        scale slider { background: #cdd6f4; min-width: 16px; min-height: 16px; border-radius: 8px; }
+        switch:checked { background: #f9e2af; }
+    """)
+    Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), css,
+                                             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+    for side in ("top", "bottom", "start", "end"):
+        getattr(box, f"set_margin_{side}")(16)
+    win.add(box)
+
+    row = Gtk.Box(spacing=10)
+    title = Gtk.Label(label="Night light", xalign=0)
+    title.get_style_context().add_class("title")
+    switch = Gtk.Switch(active=state["enabled"], valign=Gtk.Align.CENTER)
+    row.pack_start(title, True, True, 0)
+    row.pack_end(switch, False, False, 0)
+    box.pack_start(row, False, False, 0)
+
+    def slider(label, lo, hi, step, value, fmt):
+        lab = Gtk.Label(label=label, xalign=0)
+        lab.get_style_context().add_class("dim")
+        sc = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, lo, hi, step)
+        sc.set_value(value)
+        sc.set_draw_value(True)
+        sc.set_value_pos(Gtk.PositionType.RIGHT)
+        sc.connect("format-value", lambda s, v: fmt(v))
+        box.pack_start(lab, False, False, 0)
+        box.pack_start(sc, False, False, 0)
+        return sc
+
+    temp = slider("Warmth", 2500, 6500, 100, state["temperature"], lambda v: f"{int(v) // 100 * 100} K")
+    temp.set_inverted(True)  # right = warmer
+    bright = slider("Brightness", 30, 100, 1, state["brightness"], lambda v: f"{int(v)} %")
+    temp.set_sensitive(state["enabled"])
+
+    switch.connect("notify::active", changed)
+    temp.connect("value-changed", changed)
+    bright.connect("value-changed", changed)
+
+    win.show_all()
+    Gtk.main()
+
+
+def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "popup"
+    if cmd == "status":
+        status()
+    elif cmd == "toggle":
+        toggle()
+    elif cmd == "restore":
+        if shutil.which("hyprsunset"):
+            start_hyprsunset(load())
+    elif cmd == "popup":
+        popup()
+    else:
+        print(__doc__)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

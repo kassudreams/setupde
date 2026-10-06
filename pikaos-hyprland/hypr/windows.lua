@@ -26,8 +26,12 @@ end
 -- Cascade: a new floating window that lands exactly on another one is
 -- nudged down-right until it has its own spot (like labwc).
 local STEP = 36
+-- Windows that keep their own size and place (no maximise / cascade)
+local KEEP_PLACE = { ["setupde-nightlight"] = true }
+
 hl.on("window.open", function(w)
 	if not w or not w.floating or not w.workspace then return end
+	if KEEP_PLACE[w.class or ""] then return end
 	local others, any_other = {}, false
 	for _, o in ipairs(hl.get_workspace_windows(w.workspace)) do
 		if o.address ~= w.address then
@@ -77,6 +81,16 @@ function M.toggle_workspace_mode()
 	hl.exec_cmd("notify-send -t 1500 'Workspace " .. ws.id .. "' '" ..
 		(float and "Floating windows" or "Tiling windows") .. "'")
 end
+
+-- Night light popup: small, top right under the panel, on top
+hl.window_rule({
+	name  = "nightlight-popup",
+	match = { class = "^setupde-nightlight$" },
+	float = true,
+	move  = "monitor_w-window_w-16 56",
+	pin   = true,
+	persistent_size = false,
+})
 
 -- Ignore apps asking to maximise themselves
 hl.window_rule({
