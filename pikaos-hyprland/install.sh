@@ -36,7 +36,7 @@ PKGS=(
 	fonts-inter fonts-noto-color-emoji fonts-dejavu-core
 	papirus-icon-theme adwaita-icon-theme
 	xdg-utils curl xz-utils fontconfig
-	hyprsunset python3-gi gir1.2-gtk-3.0 libgtk-3-bin btop nvtop
+	hyprsunset python3-gi gir1.2-gtk-3.0 libgtk-3-bin btop nvtop socat
 )
 
 c_blue=$'\e[1;34m'; c_yellow=$'\e[1;33m'; c_red=$'\e[1;31m'; c_off=$'\e[0m'
@@ -212,7 +212,7 @@ fi
 # ---------------------------------------------------------------- scripts
 step "Installing helper scripts to /usr/local/bin"
 for f in setupde-powermenu setupde-screenshot setupde-clipboard setupde-rebuild-plugins \
-         setupde-dock setupde-sysinfo setupde-nightlight; do
+         setupde-dock setupde-sysinfo setupde-nightlight setupde-network; do
 	sudo install -m 755 "$REPO_DIR/bin/$f" /usr/local/bin/
 	echo "    $f"
 done
@@ -273,6 +273,15 @@ sed "s|@CPU_TEMP_SOURCE@|$cpu_temp|" "$HERE/waybar/config.jsonc" > "$tmp_cfg"
 install_file "$tmp_cfg" "$CONFIG_HOME/waybar/config.jsonc"
 rm -f "$tmp_cfg"
 echo "    waybar/config.jsonc, waybar/style.css"
+
+# The panel's network icon has its own menu, so keep nm-applet / blueman out
+# of the tray if the system would autostart them
+for app in nm-applet blueman; do
+	if [ -f "/etc/xdg/autostart/$app.desktop" ]; then
+		mkdir -p "$CONFIG_HOME/autostart"
+		printf '[Desktop Entry]\nHidden=true\n' > "$CONFIG_HOME/autostart/$app.desktop"
+	fi
+done
 
 # Dock: default pinned apps on first install, then generate it
 command -v setupde-dock >/dev/null && setupde-dock build >/dev/null 2>&1 || true

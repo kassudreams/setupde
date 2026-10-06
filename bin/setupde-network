@@ -1,0 +1,79 @@
+#!/bin/bash
+# Network menu (click the network icon in the panel). Uses NetworkManager.
+#   - shows Wi-Fi networks with signal bars, connects (asks for the password
+#     for new secured networks), disconnects, turns Wi-Fi on/off
+#   - "Network settings" opens the full NetworkManager editor (VPNs, static IP, ...)
+
+menu() { fuzzel --dmenu --prompt "$1" --width 44 --lines "${2:-12}"; }
+note() { notify-send -t 3000 -i network-wireless "Network" "$1" 2>/dev/null || true; }
+
+bars() { # signal % -> bars
+	local s=$1
+	if   [ "$s" -ge 75 ]; then echo "▂▄▆█"
+	elif [ "$s" -ge 50 ]; then echo "▂▄▆_"
+	elif [ "$s" -ge 25 ]; then echo "▂▄__"
+	else                       echo "▂___"; fi
+}
+
+wifi_on() { [ "$(nmcli -t radio wifi 2>/dev/null)" = enabled ]; }
+
+items=()
+declare -A ssid_of secure_of seen
+
+if wifi_on; then
+	# IN-USE:SIGNAL:SECURITY:SSID (SSID last, may contain ':')
+	while IFS= read -r line; do
+		inuse="${line%%:*}";  line="${line#*:}"
+		signal="${line%%:*}"; line="${line#*:}"
+		sec="${line%%:*}";    ssid="${line#*:}"
+		[ -n "$ssid" ] || continue
+		[ -n "${seen[$ssid]+x}" ] && continue   # same network on several bands
+		lock=""; [ -n "$sec" ] && [ "$sec" != "--" ] && lock="  "
+		mark=""; [ "$inuse" = "*" ] && mark="  ✓ connected"
+		label="$(bars "$signal")  $ssid$lock$mark"
+		items+=("$label")
+		ssid_of[$label]="$ssid"; seen[$ssid]=1
+		secure_of[$label]="$sec"
+	done < <(nmcli -t -e no -f IN-USE,SIGNAL,SECURITY,SSID device wifi list --rescan auto 2>/dev/null |
+		sort -t: -k2,2nr)
+fi
+
+active_wifi="$(nmcli -t -f NAME,TYPE connection show --active 2>/dev/null | awk -F: '$2 ~ /wireless/ {print $1; exit}')"
+wired="$(nmcli -t -f DEVICE,TYPE,STATE device 2>/dev/null | awk -F: '$2 == "ethernet" && $3 == "connected" {print $1; exit}')"
+
+extra=()
+[ -n "$wired" ] && extra+=("󰈀  Wired: connected ($wired)")
+[ -n "$active_wifi" ] && extra+=("󰖪  Disconnect Wi-Fi ($active_wifi)")
+if wifi_on; then extra+=("󰖪  Turn Wi-Fi off"); else extra+=("󰖩  Turn Wi-Fi on"); fi
+extra+=("  Network settings…")
+
+choice="$(printf '%s\n' "${items[@]}" "${extra[@]}" | menu "Network: ")"
+[ -n "$choice" ] || exit 0
+
+case "$choice" in
+	*"Turn Wi-Fi off")   nmcli radio wifi off && note "Wi-Fi turned off" ;;
+	*"Turn Wi-Fi on")    nmcli radio wifi on && note "Wi-Fi turned on" ;;
+	*"Disconnect Wi-Fi"*) nmcli connection down id "$active_wifi" >/dev/null && note "Disconnected from $active_wifi" ;;
+	*"Network settings…") nm-connection-editor >/dev/null 2>&1 & ;;
+	*"Wired: connected"*) ;;
+	*)
+		ssid="${ssid_of[$choice]}"
+		[ -n "$ssid" ] || exit 0
+		case "$choice" in *"✓ connected") exit 0 ;; esac
+		# Known network -> just connect
+		if nmcli -t -f NAME connection show 2>/dev/null | grep -qxF "$ssid"; then
+			nmcli connection up id "$ssid" >/dev/null 2>&1 && note "Connected to $ssid" ||
+				note "Couldn't connect to $ssid"
+			exit 0
+		fi
+		sec="${secure_of[$choice]}"
+		if [ -n "$sec" ] && [ "$sec" != "--" ]; then
+			pw="$(printf '' | fuzzel --dmenu --password --prompt "Password for $ssid: " --lines 0 --width 44)"
+			[ -n "$pw" ] || exit 0
+			out="$(nmcli device wifi connect "$ssid" password "$pw" 2>&1)"
+		else
+			out="$(nmcli device wifi connect "$ssid" 2>&1)"
+		fi
+		if [ $? -eq 0 ]; then note "Connected to $ssid"; else note "Couldn't connect: ${out##*: }"; fi
+		;;
+esac

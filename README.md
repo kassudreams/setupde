@@ -70,8 +70,8 @@ borders, blur, animations), `windows.lua` (floating rules, cascading, workspace 
 
 | Part | What it does |
 |---|---|
-| Left | launcher, workspaces, open windows |
-| Middle | **dock**: click an icon to start the app, right-click to unpin it, **+** (or `Super+Shift+Space`) to pin an app from the app list. The list lives in `~/.config/setupde/dock.list` (edit or reorder it, then run `setupde-dock build`) |
+| Left | launcher, workspaces |
+| Middle | **dock**, pinned apps and open windows in one strip. A pinned app is a launcher while it's closed. While it runs, its windows appear as taskbar buttons with an indicator line: click to focus, middle-click to close, right-click to minimise. Right-click a launcher to unpin it, **+** (or `Super+Shift+Space`) pins an app from the app list. Order: `~/.config/setupde/dock.list`, then `setupde-dock build` |
 | Right | tray, **CPU load + temperature, GPU load + temperature, memory, power draw**, night light, screen-awake toggle, volume, network, **clock + calendar**, power menu |
 
 * **Power draw** adds CPU power (from the processor's RAPL energy counter) and GPU power
@@ -81,6 +81,9 @@ borders, blur, animations), `windows.lua` (floating rules, cascading, workspace 
   **brightness** sliders, right-click to toggle. It uses `hyprsunset`, and brightness is a software
   dimmer, so it works on TVs too. Settings are remembered
 * Clicking CPU opens `btop`, clicking GPU opens `nvtop`
+* **Network** shows only a signal meter (or a wired icon). Click it for a menu with Wi-Fi networks
+  and their signal, connect (it asks for the password), disconnect, Wi-Fi on/off and the full
+  network settings. Hover it for the network name, IP and speed. nm-applet is no longer in the tray
 
 **After PikaOS updates Hyprland** the title bars disappear until the plugin is rebuilt for the new
 version. Run `setupde-rebuild-plugins`.

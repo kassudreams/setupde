@@ -17,6 +17,8 @@ fi
 # Panel (the dock in its middle is generated first) and notifications
 command -v setupde-dock >/dev/null && setupde-dock build
 waybar >/dev/null 2>&1 &
+# keeps the dock's pinned icons in sync with open windows
+command -v setupde-dock >/dev/null && setupde-dock watch >/dev/null 2>&1 &
 mako >/dev/null 2>&1 &
 
 # Password prompts for apps that need admin rights (first agent found)
@@ -33,8 +35,8 @@ if ! pgrep -f 'polkit.*agent|hyprpolkitagent|lxpolkit' >/dev/null; then
 	done
 fi
 
-# Tray applets
-command -v nm-applet >/dev/null && nm-applet --indicator >/dev/null 2>&1 &
+# No nm-applet / blueman tray icons: the network icon in the panel has the
+# menu (setupde-network), so they'd only show the same thing twice.
 
 # Clipboard history (Super+V)
 command -v cliphist >/dev/null && wl-paste --watch cliphist store >/dev/null 2>&1 &

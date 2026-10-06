@@ -148,3 +148,29 @@ tooltip label { color: @text; }
 #custom-dock-add:hover { color: @text; background: @surface1; }
 /* rounded left end of the dock */
 .modules-center > widget:first-child > #image { border-radius: 8px 0 0 8px; }
+
+/* Pinned icons hide while their app runs (the taskbar shows it instead) */
+#image.empty { padding: 0; margin: 0; background: transparent; min-width: 0; }
+
+/* Open windows inside the dock: one continuous strip, Windows-style
+   indicator line under each window, brighter for the focused one */
+.modules-center #taskbar {
+  background: @surface0;
+  border-radius: 0;
+  margin: 4px 0;
+  padding: 0 2px;
+}
+.modules-center #taskbar.empty { padding: 0; }
+.modules-center #taskbar button {
+  padding: 0 7px;
+  border-radius: 6px;
+  border-bottom: 2px solid @overlay0;
+}
+.modules-center #taskbar button.active {
+  background: @surface1;
+  border-bottom: 2px solid @blue;
+}
+.modules-center #taskbar button.minimized { opacity: 0.6; }
+
+/* Network: icon only */
+#network { padding: 0 12px; font-size: 15px; }
