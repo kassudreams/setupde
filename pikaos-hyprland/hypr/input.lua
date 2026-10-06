@@ -3,7 +3,9 @@
 hl.config({
 	input = {
 		kb_layout  = "@KB_LAYOUT@",
-		kb_options = "grp:alt_shift_toggle", -- Alt+Shift switches layouts if you list two ("us,fi")
+		-- For two layouts use e.g. kb_layout = "fi,us" and
+		-- kb_options = "grp:alt_shift_toggle" (Alt+Shift switches)
+		kb_options = "",
 		numlock_by_default = true,
 		repeat_rate  = 30,
 		repeat_delay = 300,
