@@ -174,6 +174,14 @@ mkdir -p "$CONFIG_HOME/hypr"
 cp "$HERE"/hypr/* "$CONFIG_HOME/hypr/"
 chmod +x "$CONFIG_HOME/hypr/autostart.sh"
 sed -i "s/@KB_LAYOUT@/$LAYOUT/" "$CONFIG_HOME/hypr/input.lua"
+# Keep PikaOS's Qt theming (qt6ct/kdeglobals dark theme) instead of ours
+if [ -d "$HYPR_BACKUP" ]; then
+	qt_theme="$(sed -n 's/.*"QT_QPA_PLATFORMTHEME"[[:space:]]*,[[:space:]]*"\([^"]*\)".*/\1/p' "$HYPR_BACKUP"/*.lua 2>/dev/null | head -n1)"
+	if [ -n "$qt_theme" ]; then
+		sed -i "s/hl.env(\"QT_QPA_PLATFORMTHEME\", \"[^\"]*\")/hl.env(\"QT_QPA_PLATFORMTHEME\", \"$qt_theme\")/" "$CONFIG_HOME/hypr/env.lua"
+		echo "    Qt theme: $qt_theme (kept from PikaOS)"
+	fi
+fi
 # Keep PikaOS's wallpaper if it had one in the config folder
 for w in "$HYPR_BACKUP"/wallpaper.*; do
 	[ -f "$w" ] && cp "$w" "$CONFIG_HOME/hypr/wallpaper" && break
