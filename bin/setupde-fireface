@@ -5,6 +5,9 @@
 #   setupde-fireface setup 9      same, naming the first AES channel explicitly
 #   setupde-fireface test 9       play a short tone on channels 9-10 to check
 #   setupde-fireface channels     show what PipeWire sees on the card
+#   setupde-fireface levels       show every volume stage between apps and the AES out
+#   setupde-fireface max          set all of them to full (0 dB) - then use the
+#                                 panel volume as the only control
 #   setupde-fireface remove       undo (delete the config files)
 #
 # What setup does:
@@ -154,6 +157,58 @@ test_tone() {
 	rm -f "$tmp"
 }
 
+alsa_card_index() { # ALSA card number of the Fireface
+	awk -F'[][]' '/Fireface|RME/ { gsub(/ /, "", $0); print substr($0, 1, index($0, "[") - 1); exit }' /proc/asound/cards
+}
+
+input_of() { # sink-input index of the loopback that feeds the card
+	pactl list sink-inputs 2>/dev/null | awk -v n="$SINK_NAME.output" '
+		/^Sink Input #/ { id = substr($3, 2) }
+		/node.name = / && index($0, "\"" n "\"") { print id; exit }'
+}
+
+levels() {
+	local c s idx in
+	c="$(card)" || die "no RME / Fireface card found"
+	s="$(pro_sink "$c")"
+	echo "1. Genelec output (panel volume):"
+	pactl get-sink-volume "$SINK_NAME" 2>/dev/null | head -n1 | sed 's/^/     /' || echo "     (not set up)"
+	in="$(input_of)"
+	echo "2. Link Genelec output -> Fireface:"
+	if [ -n "$in" ]; then
+		pactl list sink-inputs | awk -v id="$in" '/^Sink Input #/ { on = (substr($3, 2) == id) } on && /Volume:/ { print "     " $0; exit }'
+	else
+		echo "     (not found)"
+	fi
+	echo "3. Fireface output in PipeWire:"
+	[ -n "$s" ] && pactl get-sink-volume "$s" | head -n1 | sed 's/^/     /'
+	idx="$(alsa_card_index)"
+	echo "4. Fireface hardware controls (ALSA card ${idx:-?}):"
+	if [ -n "$idx" ]; then
+		amixer -c "$idx" 2>/dev/null | awk '/^Simple mixer control/ { name = $0 } /Playback.*\[/ { print "     " name " ->" $0 }' | head -20
+	fi
+	echo "5. Fireface front panel: AES output level and the volume knob (set on the device)"
+}
+
+max() {
+	local c s idx in ctl
+	c="$(card)" || die "no RME / Fireface card found"
+	s="$(pro_sink "$c")"
+	pactl set-sink-volume "$SINK_NAME" 100% 2>/dev/null && echo "1. Genelec output -> 100%"
+	in="$(input_of)"
+	[ -n "$in" ] && pactl set-sink-input-volume "$in" 100% && echo "2. Link -> 100%"
+	[ -n "$s" ] && pactl set-sink-volume "$s" 100% && pactl set-sink-mute "$s" 0 && echo "3. Fireface output -> 100%"
+	idx="$(alsa_card_index)"
+	if [ -n "$idx" ]; then
+		while IFS= read -r ctl; do
+			amixer -c "$idx" -q sset "$ctl" 100% unmute 2>/dev/null && echo "4. ALSA '$ctl' -> 100%"
+		done < <(amixer -c "$idx" scontrols 2>/dev/null | sed -n "s/^Simple mixer control '\(.*\)',[0-9]*$/\1/p")
+	fi
+	echo
+	echo "Everything in the computer now sends full level. If it's still too quiet,"
+	echo "check the Fireface front panel: the AES output level and what the big knob controls."
+}
+
 remove() {
 	rm -f "$PW_CONF" "$WP_CONF"
 	systemctl --user restart wireplumber pipewire pipewire-pulse
@@ -164,6 +219,8 @@ case "${1:-setup}" in
 	setup)    setup "${2:-9}" ;;
 	test)     test_tone "${2:-9}" ;;
 	channels) channels ;;
+	levels)   levels ;;
+	max)      max ;;
 	remove)   remove ;;
-	*) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+	*) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

@@ -282,6 +282,12 @@ stops the card from suspending (otherwise the monitors lose the digital signal a
 audio stops), and lets PipeWire follow the music's sample rate (44.1/48/88.2/96 kHz).
 `setupde-fireface channels` shows what PipeWire sees, `setupde-fireface remove` undoes it.
 
+**Too quiet?** `setupde-fireface levels` lists every volume stage between the apps and the AES output
+(panel volume, the internal link, the Fireface output, the card's hardware controls).
+`setupde-fireface max` sets them all to full (0 dB), so the panel volume is the only control.
+If it's still too quiet after that, the limit is the Fireface front panel (AES output level)
+or the monitors' own level.
+
 ## Troubleshooting
 
 * **MediaTek MT7927 Wi‑Fi 7 / Bluetooth** (on many X870 boards, for example MSI and ASUS;
