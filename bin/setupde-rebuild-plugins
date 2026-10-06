@@ -1,0 +1,6 @@
+#!/bin/sh
+# Rebuild Hyprland plugins (title bars) after PikaOS updates Hyprland.
+# hyprbars includes <lua.h>, which Debian/PikaOS keeps in /usr/include/lua5.5.
+CXXFLAGS="-O2 $(pkg-config --cflags lua5.5 2>/dev/null || echo -I/usr/include/lua5.5)"
+export CXXFLAGS
+hyprpm update -f && hyprpm reload && hyprctl reload

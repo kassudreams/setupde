@@ -210,7 +210,7 @@ fi
 
 # ---------------------------------------------------------------- scripts
 step "Installing helper scripts to /usr/local/bin"
-for f in setupde-powermenu setupde-screenshot setupde-clipboard; do
+for f in setupde-powermenu setupde-screenshot setupde-clipboard setupde-rebuild-plugins; do
 	sudo install -m 755 "$REPO_DIR/bin/$f" /usr/local/bin/
 	echo "    $f"
 done

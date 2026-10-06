@@ -66,6 +66,9 @@ Config files in `~/.config/hypr`: `monitors.lua`, `input.lua` (keyboard), `look.
 borders, blur, animations), `windows.lua` (floating rules, cascading, workspace modes, blur on panels), `keybinds.lua`,
 `autostart.sh` (panel, tray, idle). Hyprland reloads the Lua files as soon as you save them.
 
+**After PikaOS updates Hyprland** the title bars disappear until the plugin is rebuilt for the new
+version. Run `setupde-rebuild-plugins`.
+
 Go back to PikaOS's setup with `rm -rf ~/.config/hypr && mv ~/.config/hypr.pikaos-backup-<date> ~/.config/hypr`.
 
 ## Before you start
