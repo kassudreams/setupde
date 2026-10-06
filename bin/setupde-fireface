@@ -1,0 +1,169 @@
+#!/bin/bash
+# RME Fireface (class compliant mode) -> AES/EBU -> Genelec monitors, for PipeWire.
+#
+#   setupde-fireface              set everything up (output channels 9-10 = AES)
+#   setupde-fireface setup 9      same, naming the first AES channel explicitly
+#   setupde-fireface test 9       play a short tone on channels 9-10 to check
+#   setupde-fireface channels     show what PipeWire sees on the card
+#   setupde-fireface remove       undo (delete the config files)
+#
+# What setup does:
+#   1. switches the card to the "Pro Audio" profile (plain channels, no guessing)
+#   2. creates a stereo output "Genelec 8330A (AES)" that feeds the two AES
+#      channels, and makes it the default output (panel volume controls it)
+#   3. keeps the card from suspending, so the Genelecs don't lose the digital
+#      signal (and click / mute) every time audio stops
+#
+# Channel numbers are 1-based, as on the Fireface. On the UCX II the AES/SPDIF
+# output is normally channels 9-10 (after 8 analog outputs). If the test tone
+# comes out somewhere else, run `setupde-fireface test N` with other numbers.
+
+set -u
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
+PW_CONF="$CONF/pipewire/pipewire.conf.d/60-setupde-genelec-aes.conf"
+WP_CONF="$CONF/wireplumber/wireplumber.conf.d/60-setupde-fireface.conf"
+SINK_NAME="genelec_aes"
+
+die() { echo "error: $*" >&2; exit 1; }
+
+card() { pactl list cards short 2>/dev/null | awk '{print $2}' | grep -i -m1 -E 'fireface|rme'; }
+
+pro_sink() { # the Pro Audio output node of the card
+	local c="${1#alsa_card.}"
+	pactl list sinks short 2>/dev/null | awk '{print $2}' | grep -F "$c" | grep -m1 'pro-output'
+}
+
+channels() {
+	local c s
+	c="$(card)" || die "no RME / Fireface card found - is it plugged in and in CC mode?"
+	echo "Card: $c"
+	s="$(pro_sink "$c")"
+	if [ -z "$s" ]; then
+		echo "Not in Pro Audio mode yet (run: setupde-fireface setup)"
+		return
+	fi
+	echo "Output node: $s"
+	pactl list sinks | awk -v s="$s" '$1 == "Name:" { on = ($2 == s) } on && /Channel Map|Sample Specification/'
+}
+
+aux_pair() { # 1-based first channel -> "AUXn AUXn+1"
+	local n=$(( $1 - 1 ))
+	echo "AUX$n AUX$((n + 1))"
+}
+
+setup() {
+	local first="${1:-9}" c s pos
+	command -v pactl >/dev/null || die "pactl not found (sudo apt install pulseaudio-utils)"
+	c="$(card)" || die "no RME / Fireface card found - is it plugged in and in CC mode?"
+	echo "==> Found $c"
+
+	echo "==> Switching to the Pro Audio profile"
+	pactl set-card-profile "$c" pro-audio || die "couldn't set the pro-audio profile"
+	sleep 1
+	s="$(pro_sink "$c")" || true
+	[ -n "$s" ] || die "no pro-audio output node appeared for $c"
+	echo "    output node: $s"
+
+	pos="$(aux_pair "$first")"
+	echo "==> Creating the stereo 'Genelec 8330A (AES)' output on channels $first-$((first + 1)) ($pos)"
+	mkdir -p "$(dirname "$PW_CONF")" "$(dirname "$WP_CONF")"
+	cat > "$PW_CONF" <<EOF
+# Written by setupde-fireface: stereo output -> Fireface AES/EBU -> Genelecs
+context.modules = [
+  { name = libpipewire-module-loopback
+    args = {
+      node.description = "Genelec 8330A (AES)"
+      capture.props = {
+        node.name      = "$SINK_NAME"
+        media.class    = "Audio/Sink"
+        audio.position = [ FL FR ]
+      }
+      playback.props = {
+        node.name          = "$SINK_NAME.output"
+        audio.position     = [ $pos ]
+        target.object      = "$s"
+        node.dont-reconnect = true
+        stream.dont-remix  = true
+        node.passive       = true
+      }
+    }
+  }
+]
+
+# Follow the music's sample rate instead of resampling everything to 48 kHz
+# (the Genelecs relock for a moment when the rate changes)
+context.properties = {
+  default.clock.rate          = 48000
+  default.clock.allowed-rates = [ 44100 48000 88200 96000 ]
+}
+EOF
+
+	echo "==> Keeping the card on Pro Audio and never suspending it"
+	cat > "$WP_CONF" <<EOF
+# Written by setupde-fireface
+monitor.alsa.rules = [
+  { matches = [ { device.name = "$c" } ]
+    actions = { update-props = { device.profile = "pro-audio" } }
+  }
+  { matches = [ { node.name = "~alsa_output.*${c#alsa_card.}.*" } ]
+    actions = { update-props = { session.suspend-timeout-seconds = 0 } }
+  }
+]
+EOF
+
+	echo "==> Restarting PipeWire"
+	systemctl --user restart wireplumber pipewire pipewire-pulse
+	for _ in $(seq 20); do
+		pactl list sinks short 2>/dev/null | grep -q "$SINK_NAME" && break
+		sleep 0.5
+	done
+	if pactl list sinks short | grep -q "$SINK_NAME"; then
+		pactl set-default-sink "$SINK_NAME"
+		echo
+		echo "Done. 'Genelec 8330A (AES)' is now the default output."
+		echo "Check it with:  setupde-fireface test $first"
+	else
+		die "the Genelec output didn't appear - send the output of: setupde-fireface channels"
+	fi
+}
+
+tone() { # write a short 440 Hz stereo tone (left first, then right) to $1
+	python3 - "$1" <<'EOF'
+import math, struct, sys, wave
+rate, f = 48000, 440
+w = wave.open(sys.argv[1], "wb"); w.setnchannels(2); w.setsampwidth(2); w.setframerate(rate)
+frames = bytearray()
+for side in (0, 1):                       # 1 s left, then 1 s right
+    for i in range(rate):
+        env = min(1, i / 2000, (rate - i) / 2000)
+        v = int(0.2 * 32767 * env * math.sin(2 * math.pi * f * i / rate))
+        frames += struct.pack("<hh", v if side == 0 else 0, v if side == 1 else 0)
+w.writeframes(bytes(frames)); w.close()
+EOF
+}
+
+test_tone() {
+	local first="${1:-9}" c s tmp
+	c="$(card)" || die "no RME / Fireface card found"
+	s="$(pro_sink "$c")"
+	[ -n "$s" ] || die "card isn't in Pro Audio mode - run: setupde-fireface setup"
+	tmp="$(mktemp --suffix=.wav)"
+	tone "$tmp"
+	echo "Playing a tone on channel $first (left), then $((first + 1)) (right) - quietly."
+	pw-play --target "$s" --channel-map "$(aux_pair "$first" | tr ' ' ',')" "$tmp"
+	rm -f "$tmp"
+}
+
+remove() {
+	rm -f "$PW_CONF" "$WP_CONF"
+	systemctl --user restart wireplumber pipewire pipewire-pulse
+	echo "Removed the setupde Fireface config."
+}
+
+case "${1:-setup}" in
+	setup)    setup "${2:-9}" ;;
+	test)     test_tone "${2:-9}" ;;
+	channels) channels ;;
+	remove)   remove ;;
+	*) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

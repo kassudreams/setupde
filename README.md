@@ -266,6 +266,22 @@ All the configs live in `~/.config`:
 * **Reload:** `Super+Shift+R` reloads the labwc files. Waybar and mako need a
   logout, or `pkill waybar; waybar &`.
 
+## Audio interface: RME Fireface → AES/EBU → Genelec
+
+For an RME Fireface (UCX II and others) in **class compliant mode** feeding active monitors over
+AES/EBU, run once with the interface plugged in:
+
+```sh
+setupde-fireface          # set up (AES = output channels 9-10, the UCX II default)
+setupde-fireface test 9   # tone on channel 9 (left), then 10 (right)
+```
+
+It switches the card to PipeWire's *Pro Audio* profile, creates a stereo **"Genelec 8330A (AES)"**
+output mapped to the AES channels and makes it the default (the panel's volume controls it),
+stops the card from suspending (otherwise the monitors lose the digital signal and click when
+audio stops), and lets PipeWire follow the music's sample rate (44.1/48/88.2/96 kHz).
+`setupde-fireface channels` shows what PipeWire sees, `setupde-fireface remove` undoes it.
+
 ## Troubleshooting
 
 * **MediaTek MT7927 Wi‑Fi 7 / Bluetooth** (on many X870 boards, for example MSI and ASUS;
