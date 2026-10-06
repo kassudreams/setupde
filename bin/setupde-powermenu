@@ -10,7 +10,12 @@ choice=$(printf '%s\n' \
 
 case "$choice" in
 	*Lock)      swaylock -f ;;
-	*"Log out") labwc --exit ;;
+	*"Log out")
+		if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
+			hyprctl dispatch 'hl.dsp.exit()'
+		else
+			labwc --exit
+		fi ;;
 	*Suspend)   swaylock -f && loginctl suspend ;;
 	*Reboot)    loginctl reboot ;;
 	*"Shut down") loginctl poweroff ;;

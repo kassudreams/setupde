@@ -94,18 +94,18 @@
     <keybind key="W-r"><action name="Execute" command="fuzzel" /></keybind>
     <keybind key="W-e"><action name="Execute" command="thunar" /></keybind>
     <keybind key="W-b"><action name="Execute" command="firefox" /></keybind>
-    <keybind key="W-v"><action name="Execute" command="labwc-clipboard" /></keybind>
+    <keybind key="W-v"><action name="Execute" command="setupde-clipboard" /></keybind>
     <keybind key="W-l"><action name="Execute" command="swaylock -f" /></keybind>
-    <keybind key="W-Escape"><action name="Execute" command="labwc-powermenu" /></keybind>
-    <keybind key="C-A-Delete"><action name="Execute" command="labwc-powermenu" /></keybind>
+    <keybind key="W-Escape"><action name="Execute" command="setupde-powermenu" /></keybind>
+    <keybind key="C-A-Delete"><action name="Execute" command="setupde-powermenu" /></keybind>
     <keybind key="W-n"><action name="Execute" command="makoctl dismiss --all" /></keybind>
     <!-- Toggle display scale 1 <-> normal (native 4K for X11 games) -->
     <keybind key="W-F12"><action name="Execute" command="display-scale toggle" /></keybind>
 
     <!-- Screenshots (saved to ~/Pictures/Screenshots and copied to clipboard) -->
-    <keybind key="Print"><action name="Execute" command="labwc-screenshot area" /></keybind>
-    <keybind key="S-Print"><action name="Execute" command="labwc-screenshot full" /></keybind>
-    <keybind key="C-Print"><action name="Execute" command="labwc-screenshot edit" /></keybind>
+    <keybind key="Print"><action name="Execute" command="setupde-screenshot area" /></keybind>
+    <keybind key="S-Print"><action name="Execute" command="setupde-screenshot full" /></keybind>
+    <keybind key="C-Print"><action name="Execute" command="setupde-screenshot edit" /></keybind>
 
     <!-- Windows -->
     <keybind key="W-q"><action name="Close" /></keybind>

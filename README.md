@@ -1,4 +1,4 @@
-# setupde: labwc desktop for Void Linux
+# setupde: labwc desktop for Void Linux (+ PikaOS Hyprland)
 
 This turns a fresh (or nearly fresh) Void Linux install into a full, good-looking
 desktop based on the [labwc](https://labwc.github.io) Wayland compositor. Everything
@@ -24,6 +24,38 @@ uses one dark colour theme (Catppuccin Mocha).
 | Settings GUIs   | wdisplays (monitors), nwg-look (GTK theme), pavucontrol |
 | Apps            | Firefox, Mousepad, imv (images), mpv (video)        |
 | Look            | Adwaita-dark GTK, Papirus-Dark icons, Inter + Noto + Nerd Font symbols |
+
+## PikaOS Hyprland
+
+The same look for **PikaOS's Hyprland edition** (Hyprland 0.55 or newer, which uses a Lua config)
+is in [`pikaos-hyprland/`](pikaos-hyprland). It uses the same waybar, fuzzel, foot, mako and
+lock screen configs. Windows **float by default** with soft shadows, blur and springy animations,
+and `Super+T` tiles the focused window.
+
+```sh
+git clone https://github.com/kassudreams/setupde.git
+cd setupde/pikaos-hyprland
+./install.sh
+```
+
+Then log out and back in. What it does:
+
+* Installs the apps with apt. Anything PikaOS doesn't have is skipped with a warning
+* Moves your current `~/.config/hypr` to `~/.config/hypr.pikaos-backup-<date>` and installs the new
+  config, keeping your keyboard layout
+* Turns off PikaOS's otter-shell panel, since waybar and mako replace it (the installer prints how
+  to turn it back on)
+* Sets the monitor to 3840x2160 at 119.88 Hz with scale 2.666667, the closest scale to 2.6 that
+  Hyprland accepts (edit `~/.config/hypr/monitors.lua`)
+* Runs X11 apps at native resolution (`xwayland.force_zero_scaling`), so Wine/Proton games such as
+  WoW see the full 3840x2160 while the desktop keeps its scale
+* With an NVIDIA card next to CPU graphics, uses the NVIDIA card. It's detected at every start
+
+Config files in `~/.config/hypr`: `monitors.lua`, `input.lua` (keyboard), `look.lua` (gaps,
+borders, blur, animations), `windows.lua` (floating rule, blur on panels), `keybinds.lua`,
+`autostart.sh` (panel, tray, idle). Hyprland reloads the Lua files as soon as you save them.
+
+Go back to PikaOS's setup with `rm -rf ~/.config/hypr && mv ~/.config/hypr.pikaos-backup-<date> ~/.config/hypr`.
 
 ## Before you start
 

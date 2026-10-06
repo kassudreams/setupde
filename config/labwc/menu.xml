@@ -50,7 +50,7 @@
       <action name="Execute" command="swaylock -f" />
     </item>
     <item label="Power…" icon="system-shutdown">
-      <action name="Execute" command="labwc-powermenu" />
+      <action name="Execute" command="setupde-powermenu" />
     </item>
   </menu>
 
