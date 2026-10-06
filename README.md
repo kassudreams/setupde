@@ -29,8 +29,13 @@ uses one dark colour theme (Catppuccin Mocha).
 
 The same look for **PikaOS's Hyprland edition** (Hyprland 0.55 or newer, which uses a Lua config)
 is in [`pikaos-hyprland/`](pikaos-hyprland). It uses the same waybar, fuzzel, foot, mako and
-lock screen configs. Windows **float by default** with soft shadows, blur and springy animations,
-and `Super+T` tiles the focused window.
+lock screen configs. Windows **float by default** with soft shadows, blur and springy animations:
+
+* New windows open centred and **cascade** instead of piling up on top of each other
+* Each app reopens at the **size you last gave it**
+* `Super+T` tiles or floats the focused window
+* `Super+Shift+T` switches the **whole workspace** between floating and tiling. In tiling mode
+  dialogs still float, like normal Hyprland. Each workspace (1-10) has its own mode
 
 ```sh
 git clone https://github.com/kassudreams/setupde.git
@@ -52,7 +57,7 @@ Then log out and back in. What it does:
 * With an NVIDIA card next to CPU graphics, uses the NVIDIA card. It's detected at every start
 
 Config files in `~/.config/hypr`: `monitors.lua`, `input.lua` (keyboard), `look.lua` (gaps,
-borders, blur, animations), `windows.lua` (floating rule, blur on panels), `keybinds.lua`,
+borders, blur, animations), `windows.lua` (floating rules, cascading, workspace modes, blur on panels), `keybinds.lua`,
 `autostart.sh` (panel, tray, idle). Hyprland reloads the Lua files as soon as you save them.
 
 Go back to PikaOS's setup with `rm -rf ~/.config/hypr && mv ~/.config/hypr.pikaos-backup-<date> ~/.config/hypr`.

@@ -234,7 +234,8 @@ cat <<EOF
 ${c_blue}Done!${c_off}  Log out and back in (Super+Shift+E) to start everything.
 
   Super+Space  launcher       Super+Enter  terminal      Super+E   files
-  Super+T      tile/float     Super+C      centre        Super+Q   close
+  Super+T      tile/float     Super+Shift+T  whole workspace  Super+Q  close
+  Super+C      centre
   Super+Esc    power menu     Alt+Tab      switch        Print     screenshot
 
   To go back to PikaOS's Hyprland setup:
