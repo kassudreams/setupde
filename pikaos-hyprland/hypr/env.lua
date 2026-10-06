@@ -7,6 +7,10 @@ hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 hl.env("QT_QPA_PLATFORMTHEME", "gtk3")
+
+-- Dark mode everywhere: GTK3 apps (Thunar, Lutris, ...) and libadwaita apps
+hl.env("GTK_THEME", "Adwaita:dark")
+hl.env("ADW_DEBUG_COLOR_SCHEME", "prefer-dark")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 hl.env("_JAVA_AWT_WM_NONREPARENTING", "1")
 hl.env("TERMINAL", "foot")

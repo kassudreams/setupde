@@ -1,8 +1,9 @@
 -- Window, workspace and layer rules.
 -- See https://wiki.hypr.land/configuring/basics/window-rules/
 --
--- Every workspace starts in FLOATING mode: windows open as normal movable
--- windows, centred, and cascade instead of piling up on top of each other.
+-- Every workspace starts in FLOATING mode: the first window opens big (fills
+-- the screen below the panel), later ones open centred at their normal size
+-- and cascade instead of piling up. Double-click a title bar for big/small.
 --   Super+T          tile / float the focused window
 --   Super+Shift+T    switch the whole workspace between floating and tiling
 --                    (in tiling mode dialogs still float, like normal Hyprland)
@@ -27,11 +28,19 @@ end
 local STEP = 36
 hl.on("window.open", function(w)
 	if not w or not w.floating or not w.workspace then return end
-	local others = {}
+	local others, any_other = {}, false
 	for _, o in ipairs(hl.get_workspace_windows(w.workspace)) do
-		if o.address ~= w.address and o.floating then
-			others[#others + 1] = o
+		if o.address ~= w.address then
+			any_other = true
+			if o.floating then others[#others + 1] = o end
 		end
+	end
+
+	-- The first window on an empty workspace opens big: it fills the screen
+	-- below the panel. Double-click its title bar (or Super+M) to make it small.
+	if not any_other and M.float_rules[w.workspace.id] then
+		hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "set", window = w }))
+		return
 	end
 	local x, y, shift = w.at.x, w.at.y, 0
 	for _ = 1, 12 do

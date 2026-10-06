@@ -31,7 +31,10 @@ The same look for **PikaOS's Hyprland edition** (Hyprland 0.55 or newer, which u
 is in [`pikaos-hyprland/`](pikaos-hyprland). It uses the same waybar, fuzzel, foot, mako and
 lock screen configs. Windows **float by default** with soft shadows, blur and springy animations:
 
-* New windows open centred and **cascade** instead of piling up on top of each other
+* **Title bars** on every window (the `hyprbars` plugin): drag to move, **double-click to switch between
+  big** (fills the screen below the panel) **and small**, plus close / big-small / hide buttons
+* The **first window on an empty workspace opens big**; later ones open at their normal size, centred,
+  and **cascade** instead of piling up on top of each other
 * Each app reopens at the **size you last gave it**
 * `Super+T` tiles or floats the focused window
 * `Super+Shift+T` switches the **whole workspace** between floating and tiling. In tiling mode
@@ -48,6 +51,9 @@ Then log out and back in. What it does:
 * Installs the apps with apt. Anything PikaOS doesn't have is skipped with a warning
 * Moves your current `~/.config/hypr` to `~/.config/hypr.pikaos-backup-<date>` and installs the new
   config, keeping your keyboard layout
+* Installs the hyprbars title-bar plugin: PikaOS's package if there is one, otherwise it builds it
+  with `hyprpm` (installs Hyprland's build dependencies, takes a few minutes)
+* Forces dark mode for GTK apps (Thunar, Lutris, ...) and keeps PikaOS's Qt theme setting
 * Turns off PikaOS's otter-shell panel, since waybar and mako replace it (the installer prints how
   to turn it back on)
 * Sets the monitor to 3840x2160 at 119.88 Hz with scale 2.666667, the closest scale to 2.6 that

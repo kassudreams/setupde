@@ -157,6 +157,38 @@ if ! fc-list 2>/dev/null | grep -qi 'Symbols Nerd Font'; then
 	rm -rf "$tmp"
 fi
 
+# ---------------------------------------------------------------- title bars
+# hyprbars draws title bars (drag to move, double-click for big/small).
+# 1) a packaged plugin from PikaOS's repo, if there is one
+# 2) otherwise build it with hyprpm (needs Hyprland's build dependencies)
+PLUGIN_PATH=""
+if [ "$WANT_PACKAGES" -eq 1 ]; then
+	step "Setting up title bars (hyprbars plugin)"
+	for pkg in hyprland-plugin-hyprbars hyprland-plugins hyprbars; do
+		if apt-cache show "$pkg" >/dev/null 2>&1 && sudo apt-get install -y "$pkg"; then
+			PLUGIN_PATH="$(dpkg -L "$pkg" 2>/dev/null | grep -m1 'hyprbars.*\.so$' || true)"
+			[ -n "$PLUGIN_PATH" ] && break
+		fi
+	done
+
+	if [ -z "$PLUGIN_PATH" ]; then
+		echo "    no packaged plugin, building it with hyprpm (takes a few minutes)"
+		sudo apt-get install -y cmake meson ninja-build cpio pkg-config git g++ gcc make || true
+		if ! sudo apt-get build-dep -y hyprland; then
+			warn "couldn't install Hyprland's build dependencies automatically (apt-get build-dep hyprland)"
+		fi
+		if hyprpm update && { hyprpm list 2>/dev/null | grep -q hyprland-plugins ||
+				printf 'y\n' | hyprpm add https://github.com/hyprwm/hyprland-plugins; } &&
+				hyprpm enable hyprbars && hyprpm reload; then
+			echo "    hyprbars built and enabled"
+		else
+			warn "building hyprbars failed, so windows have no title bars for now."
+			warn "You can still move windows with Super+drag and use Super+M for big/small."
+			warn "Send me the output of:  hyprpm update -v"
+		fi
+	fi
+fi
+
 # ---------------------------------------------------------------- scripts
 step "Installing helper scripts to /usr/local/bin"
 for f in setupde-powermenu setupde-screenshot setupde-clipboard; do
@@ -173,6 +205,10 @@ fi
 mkdir -p "$CONFIG_HOME/hypr"
 cp "$HERE"/hypr/* "$CONFIG_HOME/hypr/"
 chmod +x "$CONFIG_HOME/hypr/autostart.sh"
+if [ -n "$PLUGIN_PATH" ]; then
+	printf '-- written by install.sh: packaged hyprbars plugin\nhl.plugin.load("%s")\n' "$PLUGIN_PATH" \
+		> "$CONFIG_HOME/hypr/plugins.lua"
+fi
 sed -i "s/@KB_LAYOUT@/$LAYOUT/" "$CONFIG_HOME/hypr/input.lua"
 # Keep PikaOS's Qt theming (qt6ct/kdeglobals dark theme) instead of ours
 if [ -d "$HYPR_BACKUP" ]; then

@@ -5,10 +5,14 @@
 -- autostart.sh only runs when Hyprland starts (log out and in for that).
 -- Reference: https://wiki.hypr.land/configuring/
 
+-- plugins.lua only exists if install.sh found a packaged hyprbars plugin
+pcall(require, "plugins")
+
 require("monitors")
 require("env")
 require("input")
 require("look")
+require("bars")
 require("windows")
 require("keybinds")
 require("autostart")

@@ -9,6 +9,11 @@ else
 	swaybg -c '#1e1e2e' >/dev/null 2>&1 &
 fi
 
+# Title bars (hyprbars plugin), then reload the config so bars.lua applies
+if command -v hyprpm >/dev/null; then
+	{ hyprpm reload -n && hyprctl reload; } >/dev/null 2>&1 &
+fi
+
 # Panel and notifications
 waybar >/dev/null 2>&1 &
 mako >/dev/null 2>&1 &
