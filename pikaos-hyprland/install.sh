@@ -174,9 +174,24 @@ if [ "$WANT_PACKAGES" -eq 1 ]; then
 	if [ -z "$PLUGIN_PATH" ]; then
 		echo "    no packaged plugin, building it with hyprpm (takes a few minutes)"
 		sudo apt-get install -y cmake meson ninja-build cpio pkg-config git g++ gcc make || true
-		if ! sudo apt-get build-dep -y hyprland; then
-			warn "couldn't install Hyprland's build dependencies automatically (apt-get build-dep hyprland)"
-		fi
+		# Everything Hyprland 0.56's CMake checks for (hyprpm configures the
+		# Hyprland source to get its headers). Missing ones are skipped.
+		HYPR_BUILD_DEPS=(
+			glslang-dev hyprwayland-scanner
+			libaquamarine-dev libhyprlang-dev libhyprcursor-dev libhyprutils-dev libhyprgraphics-dev
+			libxkbcommon-dev uuid-dev libwayland-dev wayland-protocols
+			libcairo2-dev libpango1.0-dev libpixman-1-dev libxcursor-dev libdrm-dev
+			libinput-dev libeis-dev libgbm-dev libglib2.0-dev libre2-dev libmuparser-dev
+			liblcms2-dev liblua5.5-dev libgles-dev libegl-dev libopengl-dev libudis86-dev
+			libxcb1-dev libxcb-render0-dev libxcb-xfixes0-dev libxcb-icccm4-dev
+			libxcb-composite0-dev libxcb-res0-dev libxcb-errors-dev
+		)
+		deps=()
+		for p in "${HYPR_BUILD_DEPS[@]}"; do
+			apt-cache show "$p" >/dev/null 2>&1 && deps+=("$p") || warn "build dependency $p not found"
+		done
+		sudo apt-get install -y "${deps[@]}" || true
+		sudo apt-get build-dep -y hyprland >/dev/null 2>&1 || true
 		if hyprpm update && { hyprpm list 2>/dev/null | grep -q hyprland-plugins ||
 				printf 'y\n' | hyprpm add https://github.com/hyprwm/hyprland-plugins; } &&
 				hyprpm enable hyprbars && hyprpm reload; then
