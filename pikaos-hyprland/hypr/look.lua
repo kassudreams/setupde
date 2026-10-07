@@ -69,6 +69,12 @@ hl.config({
 	xwayland = {
 		force_zero_scaling = true,
 	},
+
+	-- HDR: switch the screen to HDR when a fullscreen game/video outputs HDR
+	-- (1 = on, 0 = off; `setupde-hdr` changes this)
+	render = {
+		cm_auto_hdr = 1,
+	},
 })
 
 -- Animations: windows pop in on a soft spring and drift out

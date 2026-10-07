@@ -1,0 +1,25 @@
+#!/bin/sh
+# Switch HDR on Hyprland (edits ~/.config/hypr/monitors.lua; Hyprland reloads it).
+#   setupde-hdr auto   normal desktop, fullscreen HDR games/videos turn HDR on (default)
+#   setupde-hdr on     HDR all the time
+#   setupde-hdr off    never HDR (also turns off the automatic switch)
+#   setupde-hdr        show the current mode
+f="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/monitors.lua"
+look="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/look.lua"
+[ -f "$f" ] || { echo "no $f" >&2; exit 1; }
+
+set_cm() { sed -i "s/^\([[:space:]]*cm[[:space:]]*=[[:space:]]*\)\"[^\"]*\"/\1\"$1\"/" "$f"; }
+set_auto() { # render.cm_auto_hdr: 1 = switch to HDR for fullscreen HDR apps, 0 = never
+	grep -q 'cm_auto_hdr' "$look" 2>/dev/null &&
+		sed -i "s/cm_auto_hdr[[:space:]]*=[[:space:]]*[0-9]/cm_auto_hdr = $1/" "$look"
+}
+
+case "${1:-}" in
+	auto) set_cm srgb; set_auto 1; msg="HDR: automatic (fullscreen HDR apps)" ;;
+	on)   set_cm hdr;  set_auto 1; msg="HDR: always on" ;;
+	off)  set_cm srgb; set_auto 0; msg="HDR: off" ;;
+	"")   sed -n 's/^[[:space:]]*cm[[:space:]]*=[[:space:]]*"\([^"]*\)".*/cm = \1/p' "$f"
+	      grep -o 'cm_auto_hdr *= *[0-9]' "$look" 2>/dev/null; exit 0 ;;
+	*)    sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac
+notify-send -t 2500 "Display" "$msg" 2>/dev/null || echo "$msg"

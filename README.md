@@ -85,6 +85,15 @@ borders, blur, animations), `windows.lua` (floating rules, cascading, workspace 
   and their signal, connect (it asks for the password), disconnect, Wi-Fi on/off and the full
   network settings. Hover it for the network name, IP and speed. nm-applet is no longer in the tray
 
+**HDR:** the monitor runs at 10-bit, and `setupde-hdr auto` (the default) switches the screen to HDR
+whenever a fullscreen game or video outputs HDR. `setupde-hdr on` keeps HDR on all the time,
+`setupde-hdr off` disables it. On an LG TV, turn on *HDMI Ultra HD Deep Colour* for that input.
+Apps need to send HDR themselves:
+
+* **Proton games:** launch options `PROTON_ENABLE_WAYLAND=1 PROTON_ENABLE_HDR=1 %command%`, then
+  turn HDR on in the game. The other way is gamescope: `gamescope --hdr-enabled -W 3840 -H 2160 -r 120 -f -- %command%`
+* **Videos:** `mpv --vo=gpu-next --target-colorspace-hint=yes file.mkv`
+
 **After PikaOS updates Hyprland** the title bars disappear until the plugin is rebuilt for the new
 version. Run `setupde-rebuild-plugins`.
 
