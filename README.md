@@ -94,6 +94,11 @@ Apps need to send HDR themselves:
   turn HDR on in the game. The other way is gamescope: `gamescope --hdr-enabled -W 3840 -H 2160 -r 120 -f -- %command%`
 * **Videos:** `mpv --vo=gpu-next --target-colorspace-hint=yes file.mkv`
 
+**GNU Guix next to PikaOS:** the config adds Guix's programs, app launchers (fuzzel and the dock),
+language data and cursor themes to the session, and `~/.config/fontconfig/conf.d/10-setupde-system-fonts.conf`
+lets Guix programs use the system fonts. Install Guix apps with `guix install <name>`, for example
+`guix install icecat glibc-locales`, then log out and back in once.
+
 **After PikaOS updates Hyprland** the title bars disappear until the plugin is rebuilt for the new
 version. Run `setupde-rebuild-plugins`.
 

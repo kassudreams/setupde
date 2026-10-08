@@ -29,7 +29,7 @@ app_dirs() {
 	for d in "${XDG_DATA_HOME:-$HOME/.local/share}" \
 	         /var/lib/flatpak/exports/share \
 	         "$HOME/.local/share/flatpak/exports/share" \
-	         /usr/local/share /usr/share; do
+	         /usr/local/share /usr/share "$HOME/.guix-profile/share"; do
 		[ -d "$d/applications" ] && echo "$d/applications"
 	done
 }
@@ -55,7 +55,8 @@ icon_path() {
 	if [ -z "$name" ]; then name=application-x-executable; fi
 	case "$name" in /*) [ -f "$name" ] && { echo "$name"; return; } ;; esac
 	for base in "${XDG_DATA_HOME:-$HOME/.local/share}/icons" /var/lib/flatpak/exports/share/icons \
-	            "$HOME/.local/share/flatpak/exports/share/icons" /usr/share/icons; do
+	            "$HOME/.local/share/flatpak/exports/share/icons" /usr/share/icons \
+	            "$HOME/.guix-profile/share/icons"; do
 		for dir in Papirus-Dark/64x64/apps Papirus/64x64/apps Papirus-Dark/48x48/apps \
 		           hicolor/scalable/apps hicolor/256x256/apps hicolor/128x128/apps \
 		           hicolor/64x64/apps hicolor/48x48/apps Adwaita/scalable/apps; do

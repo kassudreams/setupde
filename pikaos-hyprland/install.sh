@@ -296,6 +296,9 @@ if [ -e /sys/class/powercap/intel-rapl:0/energy_uj ]; then
 	echo "    CPU power readable by the panel (/etc/tmpfiles.d/setupde-rapl.conf)"
 fi
 install_file "$REPO_DIR/config/gtk-3.0/settings.ini" "$CONFIG_HOME/gtk-4.0/settings.ini"
+# Guix programs (e.g. IceCat) use their own fontconfig; point it at the system fonts
+install_file "$HERE/fontconfig/10-setupde-system-fonts.conf" \
+	"$CONFIG_HOME/fontconfig/conf.d/10-setupde-system-fonts.conf"
 
 if command -v gsettings >/dev/null; then
 	gsettings set org.gnome.desktop.interface color-scheme prefer-dark 2>/dev/null || true
