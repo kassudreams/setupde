@@ -310,23 +310,28 @@ fi
 mkdir -p "$HOME/Pictures/Screenshots"
 [ -d "$BACKUP_DIR" ] && warn "replaced app configs were backed up to $BACKUP_DIR"
 
-# ---------------------------------------------------------------- otter-shell
-# PikaOS's own shell (panel, launcher, notifications) would run next to waybar
-# and mako if something other than the old hypr config starts it.
-OTTER_UNITS="$(systemctl --user list-unit-files 2>/dev/null | awk '{print $1}' | grep -i otter || true)"
-if [ -n "$OTTER_UNITS" ]; then
-	step "Turning off PikaOS's otter-shell (waybar + mako replace it)"
-	for u in $OTTER_UNITS; do
+# ---------------------------------------------------------------- PikaOS shell + locker
+# PikaOS's own shell (otter-shell: panel, launcher, notifications) and its idle
+# locker (hypridle -> hyprlock) would run next to ours (waybar, mako, swayidle
+# -> swaylock). Two lockers fight over the screen, and hyprlock without its
+# PikaOS config shows only a background picture with no password box.
+PIKA_UNITS="$(systemctl --user list-unit-files 2>/dev/null | awk '{print $1}' |
+	grep -i -E 'otter|hypridle|hyprlock' || true)"
+if [ -n "$PIKA_UNITS" ]; then
+	step "Turning off PikaOS's shell and idle locker (ours replace them)"
+	for u in $PIKA_UNITS; do
 		systemctl --user disable --now "$u" 2>/dev/null || true
 		echo "    disabled $u   (undo: systemctl --user enable --now $u)"
 	done
 fi
-for f in /etc/xdg/autostart/*otter*.desktop; do
+for f in /etc/xdg/autostart/*otter*.desktop /etc/xdg/autostart/*hypridle*.desktop \
+         /etc/xdg/autostart/*hyprlock*.desktop; do
 	[ -f "$f" ] || continue
 	mkdir -p "$CONFIG_HOME/autostart"
 	printf '[Desktop Entry]\nHidden=true\n' > "$CONFIG_HOME/autostart/$(basename "$f")"
 	echo "    hid autostart entry $(basename "$f")   (undo: rm ~/.config/autostart/$(basename "$f"))"
 done
+pkill -x hypridle 2>/dev/null || true
 
 cat <<EOF
 

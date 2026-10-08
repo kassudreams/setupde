@@ -5,6 +5,9 @@ indicator-radius=90
 indicator-thickness=8
 show-failed-attempts
 ignore-empty-password
+# always show the ring, so it's obvious this is the lock screen: just type
+# your password and press Enter
+indicator-idle-visible
 
 inside-color=1e1e2e
 inside-clear-color=1e1e2e
