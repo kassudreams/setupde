@@ -44,8 +44,13 @@ command -v cliphist >/dev/null && wl-paste --watch cliphist store >/dev/null 2>&
 # Night light + brightness with your saved settings (moon icon in the panel)
 command -v setupde-nightlight >/dev/null && setupde-nightlight restore
 
-# Idle: lock after 5 min, screen off after 10 min, lock before suspend
+# Idle: lock after 5 min, screen off after 10 min, lock before suspend.
+# "lock" also answers `loginctl lock-session` from anything else (PikaOS's
+# otter tools use it), so the lock screen is always swaylock - type your
+# password and press Enter.
+pkill -x otter-idle 2>/dev/null
 swayidle -w \
+	lock 'pidof swaylock || swaylock -f' \
 	timeout 300 'swaylock -f' \
 	timeout 600 "hyprctl dispatch 'hl.dsp.dpms({ action = \"off\" })'" \
 	resume "hyprctl dispatch 'hl.dsp.dpms({ action = \"on\" })'" \

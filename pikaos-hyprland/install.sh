@@ -333,6 +333,22 @@ for f in /etc/xdg/autostart/*otter*.desktop /etc/xdg/autostart/*hypridle*.deskto
 done
 pkill -x hypridle 2>/dev/null || true
 
+# PikaOS's otter-idle locks with otter-lock (a moving picture screensaver)
+# after 5 minutes, racing our swaylock. Switch its timers off and make it use
+# swaylock if anything still starts it.
+OTTER_IDLE="$CONFIG_HOME/otter-shell/otter-idle.conf"
+if [ -f "$OTTER_IDLE" ]; then
+	# keep the original next to the other backups
+	mkdir -p "$BACKUP_DIR/.config/otter-shell"
+	cp -n "$OTTER_IDLE" "$BACKUP_DIR/.config/otter-shell/otter-idle.conf" 2>/dev/null || true
+	sed -i -E \
+		-e 's/^(listener_[0-9]+_timeout)[[:space:]]*=.*/\1 = 0/' \
+		-e 's/^lock_cmd[[:space:]]*=.*/lock_cmd = "pidof swaylock || swaylock -f"/' \
+		"$OTTER_IDLE"
+	echo "    otter-idle: timers off, locks with swaylock (~/.config/otter-shell/otter-idle.conf)"
+fi
+pkill -x otter-idle 2>/dev/null || true
+
 cat <<EOF
 
 ${c_blue}Done!${c_off}  Log out and back in (Super+Shift+E) to start everything.

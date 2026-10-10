@@ -309,11 +309,11 @@ or the monitors' own level.
 
 ## Troubleshooting
 
-* **Locked out after being away:** the lock screen is swaylock, a dark screen with a ring. Just type
-  your password and press Enter. If you only see a picture and nothing reacts, another locker
-  (PikaOS's hyprlock) is holding the screen: press `Ctrl+Alt+F3`, log in, run
-  `pkill -USR1 hyprlock; pkill -USR1 swaylock`, then go back with `Ctrl+Alt+F1` or `Ctrl+Alt+F2`.
-  Running the PikaOS installer again turns PikaOS's locker off for good.
+* **Locked out after being away / a moving picture on screen:** that's PikaOS's own lock screen
+  (otter-lock, started by otter-idle after 5 minutes). Move the mouse or press a key, then type your
+  password. If nothing reacts, press `Ctrl+Alt+F3`, log in, run `loginctl unlock-sessions`
+  (or `pkill otter-lock`), then go back with `Ctrl+Alt+F7`. Running the PikaOS installer again
+  switches otter-idle's timers off and makes every lock use swaylock (dark screen with a ring).
 
 * **MediaTek MT7927 Wi‑Fi 7 / Bluetooth** (on many X870 boards, for example MSI and ASUS;
   Bluetooth shows up as USB ID `0489:e110`): Linux only supports this card from
