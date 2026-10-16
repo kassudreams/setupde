@@ -37,6 +37,7 @@ PKGS=(
 	papirus-icon-theme adwaita-icon-theme
 	xdg-utils curl xz-utils fontconfig
 	hyprsunset python3-gi gir1.2-gtk-3.0 libgtk-3-bin btop nvtop socat
+	gnome-disk-utility gparted x11-xserver-utils exfatprogs ntfs-3g dosfstools
 )
 
 c_blue=$'\e[1;34m'; c_yellow=$'\e[1;33m'; c_red=$'\e[1;31m'; c_off=$'\e[0m'
@@ -294,6 +295,12 @@ if [ -e /sys/class/powercap/intel-rapl:0/energy_uj ]; then
 		sudo tee /etc/tmpfiles.d/setupde-rapl.conf >/dev/null
 	sudo systemd-tmpfiles --create /etc/tmpfiles.d/setupde-rapl.conf 2>/dev/null || true
 	echo "    CPU power readable by the panel (/etc/tmpfiles.d/setupde-rapl.conf)"
+fi
+# GParted runs as root, so it doesn't see our dark mode setting. Give root's
+# GTK the same settings (only if root has none of its own yet)
+if command -v gparted >/dev/null && ! sudo test -e /root/.config/gtk-3.0/settings.ini; then
+	sudo install -D -m 644 "$REPO_DIR/config/gtk-3.0/settings.ini" /root/.config/gtk-3.0/settings.ini
+	echo "    GParted in dark mode (/root/.config/gtk-3.0/settings.ini)"
 fi
 install_file "$REPO_DIR/config/gtk-3.0/settings.ini" "$CONFIG_HOME/gtk-4.0/settings.ini"
 # Guix programs (e.g. IceCat) use their own fontconfig; point it at the system fonts

@@ -61,6 +61,9 @@ Then log out and back in. What it does:
 * Runs X11 apps at native resolution (`xwayland.force_zero_scaling`), so Wine/Proton games such as
   WoW see the full 3840x2160 while the desktop keeps its scale
 * With an NVIDIA card next to CPU graphics, uses the NVIDIA card. It's detected at every start
+* Drive tools: **Disks** (GNOME Disks: format drives and USB sticks, partition, write an image to
+  a stick, check drive health) and **GParted** (resize and move partitions), with exFAT, NTFS and
+  FAT support. Both are in the app launcher and ask for your password before changing a drive
 
 Config files in `~/.config/hypr`: `monitors.lua`, `input.lua` (keyboard), `look.lua` (gaps,
 borders, blur, animations), `windows.lua` (floating rules, cascading, workspace modes, blur on panels), `keybinds.lua`,
