@@ -4,10 +4,12 @@
 -- Every workspace starts in FLOATING mode: the first window opens big (fills
 -- the screen below the panel), later ones open centred at their normal size
 -- and cascade instead of piling up. Double-click a title bar for big/small.
+--   Super+M          big / small, like double-clicking the title bar
 --   Super+T          tile / float the focused window
 --   Super+Shift+T    switch the whole workspace between floating and tiling
 --                    (in tiling mode dialogs still float, like normal Hyprland)
 
+local C = require("theme")
 local M = {}
 
 -- One "float everything" rule per workspace, so each workspace can be
@@ -23,6 +25,89 @@ for i = 1, 10 do
 	})
 end
 
+-- Big / small. A big window is a normal floating window that fills the
+-- screen below the panel. (Hyprland's own maximise mode hides the other
+-- windows and stops clicks reaching them, so switching windows with the
+-- mouse got stuck. A plain big window just comes to the front when clicked.)
+local small = {} -- window address -> its place and size before it went big
+
+local function bar_height()
+	local ok, hyprbars = pcall(function() return hl.plugin.hyprbars end)
+	return (ok and hyprbars) and C.bar_height or 0
+end
+
+-- Where a big window goes: the monitor minus the panel and the outer gap,
+-- minus the border and title bar drawn around the window
+local function big_box(w)
+	local m = w.monitor
+	if not m then return nil end
+	local pw, ph = m.width, m.height
+	if m.transform % 2 == 1 then pw, ph = ph, pw end -- rotated 90/270
+	local mw = math.floor(pw / m.scale + 0.5)
+	local mh = math.floor(ph / m.scale + 0.5)
+	local r, edge, bar = m.reserved, C.gaps_out + C.border, bar_height()
+	return {
+		x = math.floor(m.x + r.left + edge),
+		y = math.floor(m.y + r.top + edge + bar),
+		w = math.floor(mw - r.left - r.right - 2 * edge),
+		h = math.floor(mh - r.top - r.bottom - 2 * edge - bar),
+	}
+end
+
+local function near(a, b) return math.abs(a - b) <= 6 end
+
+local function is_big(w, box)
+	return near(w.at.x, box.x) and near(w.at.y, box.y) and near(w.size.x, box.w) and near(w.size.y, box.h)
+end
+
+-- About as large as a big window (e.g. it was big when the app was closed)
+local function nearly_big(w, box)
+	return w.size.x >= box.w * 0.9 and w.size.y >= box.h * 0.9
+end
+
+local function place(w, x, y, width, height)
+	hl.dispatch(hl.dsp.window.resize({ x = math.floor(width), y = math.floor(height), window = w }))
+	hl.dispatch(hl.dsp.window.move({ x = math.floor(x), y = math.floor(y), window = w }))
+end
+
+local function make_big(w, box)
+	if not nearly_big(w, box) then
+		small[w.address] = { x = w.at.x, y = w.at.y, w = w.size.x, h = w.size.y }
+	end
+	place(w, box.x, box.y, box.w, box.h)
+end
+
+local function make_small(w, box)
+	local s = small[w.address]
+	if not s then -- never been small (it opened big): 60% x 70%, centred
+		local width, height = box.w * 0.6, box.h * 0.7
+		s = { x = box.x + (box.w - width) / 2, y = box.y + (box.h - height) / 2, w = width, h = height }
+	end
+	place(w, s.x, s.y, s.w, s.h)
+end
+
+-- Double-click a title bar, its green button or Super+M
+function M.toggle_big(w)
+	w = w or hl.get_active_window()
+	if not w then return end
+	if w.fullscreen ~= 0 then -- Hyprland's maximise (Super+M on a tile) or full screen: undo it
+		hl.dispatch(hl.dsp.window.fullscreen({
+			mode = w.fullscreen == 1 and "maximized" or "fullscreen", action = "unset", window = w }))
+		return
+	end
+	if not w.floating then -- a tile: Hyprland's maximise, it covers the other tiles
+		hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "set", window = w }))
+		return
+	end
+	local box = big_box(w)
+	if not box then return end
+	if is_big(w, box) then make_small(w, box) else make_big(w, box) end
+end
+
+hl.on("window.close", function(w)
+	if w then small[w.address] = nil end
+end)
+
 -- Cascade: a new floating window that lands exactly on another one is
 -- nudged down-right until it has its own spot (like labwc).
 local STEP = 36
@@ -31,7 +116,7 @@ local KEEP_PLACE = { ["setupde-nightlight"] = true }
 
 hl.on("window.open", function(w)
 	if not w or not w.floating or not w.workspace then return end
-	if KEEP_PLACE[w.class or ""] then return end
+	if w.fullscreen ~= 0 or KEEP_PLACE[w.class or ""] then return end -- e.g. games
 	local others, any_other = {}, false
 	for _, o in ipairs(hl.get_workspace_windows(w.workspace)) do
 		if o.address ~= w.address then
@@ -42,8 +127,10 @@ hl.on("window.open", function(w)
 
 	-- The first window on an empty workspace opens big: it fills the screen
 	-- below the panel. Double-click its title bar (or Super+M) to make it small.
-	if not any_other and M.float_rules[w.workspace.id] then
-		hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "set", window = w }))
+	-- An app that was big when it was closed reopens big.
+	local box = big_box(w)
+	if box and ((not any_other and M.float_rules[w.workspace.id]) or nearly_big(w, box)) then
+		make_big(w, box)
 		return
 	end
 	local x, y, shift = w.at.x, w.at.y, 0
@@ -75,7 +162,14 @@ function M.toggle_workspace_mode()
 	rule:set_enabled(float)
 	for _, w in ipairs(hl.get_workspace_windows(ws)) do
 		if w.floating ~= float then
+			-- a maximised tile becomes a big floating window
+			local was_max = float and w.fullscreen == 1
+			if was_max then
+				hl.dispatch(hl.dsp.window.fullscreen({ mode = "maximized", action = "unset", window = w }))
+			end
 			hl.dispatch(hl.dsp.window.float({ action = float and "on" or "off", window = w }))
+			local box = was_max and big_box(w)
+			if box then make_big(w, box) end
 		end
 	end
 	hl.exec_cmd("notify-send -t 1500 'Workspace " .. ws.id .. "' '" ..

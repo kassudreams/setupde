@@ -32,13 +32,16 @@ is in [`pikaos-hyprland/`](pikaos-hyprland). It uses the same waybar, fuzzel, fo
 lock screen configs. Windows **float by default** with soft shadows, blur and springy animations:
 
 * **Title bars** on every window (the `hyprbars` plugin): drag to move, **double-click to switch between
-  big** (fills the screen below the panel) **and small**, plus close / big-small / hide buttons
+  big** (fills the screen below the panel) **and small** (also `Super+M`), plus close / big-small / hide
+  buttons. A big window is a normal window, so clicking any other window brings that one to the front
 * The **first window on an empty workspace opens big**; later ones open at their normal size, centred,
   and **cascade** instead of piling up on top of each other
 * Each app reopens at the **size you last gave it**
 * `Super+T` tiles or floats the focused window
 * `Super+Shift+T` switches the **whole workspace** between floating and tiling. In tiling mode
   dialogs still float, like normal Hyprland. Each workspace (1-10) has its own mode
+* Hyprland always keeps floating windows above tiled ones, so a tiled window can't be clicked to the
+  front of a floating one. Stick to one mode per workspace: floating with big/small, or tiling
 
 ```sh
 git clone https://github.com/kassudreams/setupde.git

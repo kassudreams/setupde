@@ -38,7 +38,7 @@ hl.bind("CTRL + Print",           exec("setupde-screenshot edit"))
 hl.bind(mod .. " + Q",            hl.dsp.window.close())
 hl.bind("ALT + F4",               hl.dsp.window.close())
 hl.bind(mod .. " + F",            hl.dsp.window.fullscreen())
-hl.bind(mod .. " + M",            hl.dsp.window.fullscreen({ mode = "maximized" }))
+hl.bind(mod .. " + M",            function() require("windows").toggle_big() end) -- big / small
 hl.bind(mod .. " + T",            hl.dsp.window.float({ action = "toggle" })) -- tile / float this window
 hl.bind(mod .. " + SHIFT + T",    require("windows").toggle_workspace_mode)   -- whole workspace
 hl.bind(mod .. " + C",            hl.dsp.window.center())

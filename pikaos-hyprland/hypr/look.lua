@@ -7,8 +7,8 @@ local rgba = C.rgba
 hl.config({
 	general = {
 		gaps_in  = 6,
-		gaps_out = 14,
-		border_size = 2,
+		gaps_out = C.gaps_out,
+		border_size = C.border,
 		col = {
 			active_border   = { colors = { rgba(C.blue, "ee"), rgba(C.mauve, "ee") }, angle = 45 },
 			inactive_border = rgba(C.surface0, "cc"),

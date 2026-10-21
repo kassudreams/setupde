@@ -1,4 +1,4 @@
--- Catppuccin Mocha palette, shared by the other files
+-- Catppuccin Mocha palette and sizes, shared by the other files
 local M = {
 	base     = "1e1e2e",
 	mantle   = "181825",
@@ -13,6 +13,11 @@ local M = {
 	yellow   = "f9e2af",
 	teal     = "94e2d5",
 }
+
+-- Sizes (look.lua, bars.lua, and windows.lua uses them to size big windows)
+M.gaps_out   = 14 -- space around windows at the screen edges
+M.border     = 2
+M.bar_height = 28 -- title bars
 
 -- rgba("89b4fa", "ee") -> "rgba(89b4faee)"
 function M.rgba(hex, alpha)

@@ -10,12 +10,12 @@ if not ok or not hyprbars then return end
 local C = require("theme")
 local rgba = C.rgba
 
-local TOGGLE_BIG = [[hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = "maximized" })']]
+local TOGGLE_BIG = [[hyprctl eval 'require("windows").toggle_big()']]
 
 hl.config({
 	plugin = {
 		hyprbars = {
-			bar_height       = 28,
+			bar_height       = C.bar_height,
 			bar_color        = rgba(C.mantle),
 			["col.text"]     = rgba(C.text),
 			inactive_button_color = rgba(C.surface1),
