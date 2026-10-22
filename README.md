@@ -87,9 +87,16 @@ borders, blur, animations), `windows.lua` (floating rules, cascading, workspace 
   **brightness** sliders, right-click to toggle. It uses `hyprsunset`, and brightness is a software
   dimmer, so it works on TVs too. Settings are remembered
 * Clicking CPU opens `btop`, clicking GPU opens `nvtop`
-* **Network** shows only a signal meter (or a wired icon). Click it for a menu with Wi-Fi networks
-  and their signal, connect (it asks for the password), disconnect, Wi-Fi on/off and the full
-  network settings. Hover it for the network name, IP and speed. nm-applet is no longer in the tray
+* **Network** shows only a signal meter (or a wired icon). Click it for one list of every way online:
+  Ethernet, a phone over USB (USB tethering) and Wi-Fi networks with their signal, plus Wi-Fi on/off
+  and the full network settings. **Pick one to switch to it**: it connects (asking the password of a
+  new Wi-Fi), then disconnects the others; VPNs aren't touched. `✓ in use` marks the one the
+  internet goes through. Hover the icon for the network name, IP and speed. nm-applet is no longer
+  in the tray
+* **Phone over USB:** plug it in and turn on tethering. iPhone: tap *Trust*, then turn on Personal
+  Hotspot (`usbmuxd`, installed by the installer, does the pairing). Android: *USB tethering* under
+  Hotspot & tethering. An iPhone's Wi-Fi hotspot only shows up while its Personal Hotspot screen is
+  open; use *Scan for Wi-Fi again* in the menu
 
 **HDR:** the monitor runs at 10-bit, and `setupde-hdr auto` (the default) switches the screen to HDR
 whenever a fullscreen game or video outputs HDR. `setupde-hdr on` keeps HDR on all the time,

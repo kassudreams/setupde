@@ -1,26 +1,143 @@
 #!/bin/bash
 # Network menu (click the network icon in the panel). Uses NetworkManager.
-#   - shows Wi-Fi networks with signal bars, connects (asks for the password
-#     for new secured networks), disconnects, turns Wi-Fi on/off
+#   - one list of every way online: Ethernet, a phone over USB (USB
+#     tethering) and Wi-Fi networks (phone hotspot too); "✓ in use" marks
+#     the one the internet goes through
+#   - picking one switches to it: it connects (asks the password of a new
+#     secured Wi-Fi), then disconnects the others, so traffic never goes
+#     through the old one. VPNs (Mullvad, ...) aren't touched.
+#   - "Scan for Wi-Fi again": an iPhone hotspot only shows up while the
+#     phone's Personal Hotspot screen is open
 #   - "Network settings" opens the full NetworkManager editor (VPNs, static IP, ...)
 
-menu() { fuzzel --dmenu --prompt "$1" --width 44 --lines "${2:-12}"; }
-note() { notify-send -t 3000 -i network-wireless "Network" "$1" 2>/dev/null || true; }
+menu() { fuzzel --dmenu --prompt "$1" --width 50 --lines "${2:-14}"; }
+note() { notify-send -t 4000 -i network-wired "Network" "$1" 2>/dev/null || true; }
 
-bars() { # signal % -> bars
+wifi_icon() { # signal % -> icon, like the panel
 	local s=$1
-	if   [ "$s" -ge 75 ]; then echo "▂▄▆█"
-	elif [ "$s" -ge 50 ]; then echo "▂▄▆_"
-	elif [ "$s" -ge 25 ]; then echo "▂▄__"
-	else                       echo "▂___"; fi
+	if   [ "$s" -ge 75 ]; then echo "󰤨"
+	elif [ "$s" -ge 50 ]; then echo "󰤥"
+	elif [ "$s" -ge 25 ]; then echo "󰤢"
+	else                       echo "󰤟"; fi
 }
 
 wifi_on() { [ "$(nmcli -t radio wifi 2>/dev/null)" = enabled ]; }
 
-items=()
-declare -A ssid_of secure_of seen
+# Name for a wired device, from its driver: phones show up as USB network cards
+wired_name() {
+	local drv
+	drv="$(readlink -f "/sys/class/net/$1/device/driver" 2>/dev/null)"
+	case "${drv##*/}" in
+		ipheth)                       echo "iPhone (USB)" ;;
+		rndis_host|cdc_ncm|cdc_ether) echo "Phone (USB)" ;;
+		*)                            echo "Ethernet" ;;
+	esac
+}
 
-if wifi_on; then
+# Ethernet and Wi-Fi devices: DEVICE:TYPE:STATE
+devices() {
+	nmcli -t -f DEVICE,TYPE,STATE device 2>/dev/null | awk -F: '$2 == "ethernet" || $2 == "wifi"'
+}
+
+# The device the internet goes through (lowest-metric default route)
+IN_USE="$(ip -4 route show default 2>/dev/null | awk '{
+	dev = ""; metric = 0
+	for (i = 1; i < NF; i++) { if ($i == "dev") dev = $(i + 1); if ($i == "metric") metric = $(i + 1) }
+	if (dev != "" && (best == "" || metric + 0 < bestm)) { best = dev; bestm = metric + 0 }
+} END { print best }')"
+
+# Disconnect every connected Ethernet/Wi-Fi device except $1
+others_down() {
+	local dev type state
+	while IFS=: read -r dev type state; do
+		[ "$dev" != "$1" ] && [ "$state" = connected ] && nmcli device disconnect "$dev" >/dev/null 2>&1
+	done < <(devices)
+}
+
+use_wired() { # device name state
+	local out
+	if [ "$3" != connected ]; then
+		note "Connecting to $2…"
+		if ! out="$(nmcli --wait 40 device connect "$1" 2>&1)"; then
+			note "Couldn't connect to $2: ${out##*: }"
+			return 1
+		fi
+	fi
+	others_down "$1"
+	note "Now using $2"
+}
+
+use_wifi() { # device ssid security state
+	local out pw
+	if [ "$4" != connected ]; then
+		note "Connecting to $2…"
+		if nmcli -g NAME connection show 2>/dev/null | sed 's/\\:/:/g' | grep -qxF "$2"; then
+			out="$(nmcli --wait 40 connection up id "$2" 2>&1)"
+		elif [ -n "$3" ] && [ "$3" != "--" ]; then
+			pw="$(printf '' | fuzzel --dmenu --password --prompt "Password for $2: " --lines 0 --width 50)"
+			[ -n "$pw" ] || return 0
+			out="$(nmcli --wait 40 device wifi connect "$2" password "$pw" ifname "$1" 2>&1)"
+		else
+			out="$(nmcli --wait 40 device wifi connect "$2" ifname "$1" 2>&1)"
+		fi
+		# shellcheck disable=SC2181
+		if [ $? -ne 0 ]; then
+			note "Couldn't connect to $2: ${out##*: }"
+			return 1
+		fi
+	fi
+	others_down "$1"
+	note "Now using $2"
+}
+
+items=()
+declare -A kind dev_of name_of state_of sec_of
+
+status() { # state device -> text after the name
+	case "$1" in
+		connected) [ "$2" = "$IN_USE" ] && echo "  ✓ in use" || echo "  connected" ;;
+		disconnected) echo "" ;;
+		connecting*|*config*|*auth*|*ip-*) echo "  connecting…" ;;
+		*) echo "  ($1)" ;;
+	esac
+}
+
+# Wired: Ethernet and phones over USB
+wifi_dev=""
+declare -A seen_name
+while IFS=: read -r dev type state; do
+	case "$state" in
+		unmanaged) continue ;;
+		connected*) state=connected ;; # also "connected (externally)"
+	esac
+	if [ "$type" = wifi ]; then
+		[ -n "$wifi_dev" ] || wifi_dev="$dev"
+		continue
+	fi
+	name="$(wired_name "$dev")"
+	if [ -n "${seen_name[$name]+x}" ]; then name="$name $dev"; fi
+	seen_name[$name]=1
+	case "$name" in Ethernet*) icon="󰈀" ;; *) icon="󰄜" ;; esac
+	if [ "$state" = unavailable ]; then
+		case "$name" in
+			Ethernet*) label="$icon  $name  (no cable)" ;;
+			*)         label="$icon  $name  (turn on tethering on the phone)" ;;
+		esac
+		kind[$label]=info
+	else
+		label="$icon  $name$(status "$state" "$dev")"
+		kind[$label]=wired
+	fi
+	items+=("$label")
+	dev_of[$label]="$dev"; name_of[$label]="$name"; state_of[$label]="$state"
+done < <(devices)
+
+# Wi-Fi networks, strongest first
+rescan=auto
+[ "${1:-}" = --rescan ] && rescan=yes
+if [ -n "$wifi_dev" ] && wifi_on; then
+	wifi_state="$(devices | awk -F: -v d="$wifi_dev" '$1 == d { sub(/^connected.*/, "connected", $3); print $3 }')"
+	declare -A seen
 	# IN-USE:SIGNAL:SECURITY:SSID (SSID last, may contain ':')
 	while IFS= read -r line; do
 		inuse="${line%%:*}";  line="${line#*:}"
@@ -28,52 +145,41 @@ if wifi_on; then
 		sec="${line%%:*}";    ssid="${line#*:}"
 		[ -n "$ssid" ] || continue
 		[ -n "${seen[$ssid]+x}" ] && continue   # same network on several bands
-		lock=""; [ -n "$sec" ] && [ "$sec" != "--" ] && lock="  "
-		mark=""; [ "$inuse" = "*" ] && mark="  ✓ connected"
-		label="$(bars "$signal")  $ssid$lock$mark"
+		seen[$ssid]=1
+		lock=""; [ -n "$sec" ] && [ "$sec" != "--" ] && lock=" 󰌾"
+		st=""; [ "$inuse" = "*" ] && st="$(status "$wifi_state" "$wifi_dev")"
+		label="$(wifi_icon "$signal")  $ssid$lock$st"
 		items+=("$label")
-		ssid_of[$label]="$ssid"; seen[$ssid]=1
-		secure_of[$label]="$sec"
-	done < <(nmcli -t -e no -f IN-USE,SIGNAL,SECURITY,SSID device wifi list --rescan auto 2>/dev/null |
-		sort -t: -k2,2nr)
+		kind[$label]=wifi; dev_of[$label]="$wifi_dev"; name_of[$label]="$ssid"
+		sec_of[$label]="$sec"; state_of[$label]="$([ "$inuse" = "*" ] && echo "$wifi_state")"
+	done < <(nmcli -t -e no -f IN-USE,SIGNAL,SECURITY,SSID device wifi list --rescan "$rescan" 2>/dev/null |
+		sort -t: -k2,2nr -k1,1r) # strongest first; the band in use first
 fi
 
-active_wifi="$(nmcli -t -f NAME,TYPE connection show --active 2>/dev/null | awk -F: '$2 ~ /wireless/ {print $1; exit}')"
-wired="$(nmcli -t -f DEVICE,TYPE,STATE device 2>/dev/null | awk -F: '$2 == "ethernet" && $3 == "connected" {print $1; exit}')"
-
 extra=()
-[ -n "$wired" ] && extra+=("󰈀  Wired: connected ($wired)")
-[ -n "$active_wifi" ] && extra+=("󰖪  Disconnect Wi-Fi ($active_wifi)")
-if wifi_on; then extra+=("󰖪  Turn Wi-Fi off"); else extra+=("󰖩  Turn Wi-Fi on"); fi
-extra+=("  Network settings…")
+if [ -n "$wifi_dev" ]; then
+	if wifi_on; then extra+=("󰑐  Scan for Wi-Fi again" "󰖪  Turn Wi-Fi off")
+	else extra+=("󰖩  Turn Wi-Fi on"); fi
+fi
+extra+=("󰒓  Network settings…")
 
 choice="$(printf '%s\n' "${items[@]}" "${extra[@]}" | menu "Network: ")"
 [ -n "$choice" ] || exit 0
 
 case "$choice" in
-	*"Turn Wi-Fi off")   nmcli radio wifi off && note "Wi-Fi turned off" ;;
-	*"Turn Wi-Fi on")    nmcli radio wifi on && note "Wi-Fi turned on" ;;
-	*"Disconnect Wi-Fi"*) nmcli connection down id "$active_wifi" >/dev/null && note "Disconnected from $active_wifi" ;;
-	*"Network settings…") nm-connection-editor >/dev/null 2>&1 & ;;
-	*"Wired: connected"*) ;;
-	*)
-		ssid="${ssid_of[$choice]}"
-		[ -n "$ssid" ] || exit 0
-		case "$choice" in *"✓ connected") exit 0 ;; esac
-		# Known network -> just connect
-		if nmcli -t -f NAME connection show 2>/dev/null | grep -qxF "$ssid"; then
-			nmcli connection up id "$ssid" >/dev/null 2>&1 && note "Connected to $ssid" ||
-				note "Couldn't connect to $ssid"
-			exit 0
-		fi
-		sec="${secure_of[$choice]}"
-		if [ -n "$sec" ] && [ "$sec" != "--" ]; then
-			pw="$(printf '' | fuzzel --dmenu --password --prompt "Password for $ssid: " --lines 0 --width 44)"
-			[ -n "$pw" ] || exit 0
-			out="$(nmcli device wifi connect "$ssid" password "$pw" 2>&1)"
-		else
-			out="$(nmcli device wifi connect "$ssid" 2>&1)"
-		fi
-		if [ $? -eq 0 ]; then note "Connected to $ssid"; else note "Couldn't connect: ${out##*: }"; fi
-		;;
+	*"Scan for Wi-Fi again") exec "$0" --rescan ;;
+	*"Turn Wi-Fi off")       nmcli radio wifi off && note "Wi-Fi turned off"; exit 0 ;;
+	*"Turn Wi-Fi on")        nmcli radio wifi on && note "Wi-Fi turned on"; exit 0 ;;
+	*"Network settings…")    nm-connection-editor >/dev/null 2>&1 & exit 0 ;;
+esac
+
+case "${kind[$choice]}" in
+	wired) use_wired "${dev_of[$choice]}" "${name_of[$choice]}" "${state_of[$choice]}" ;;
+	wifi)  use_wifi "${dev_of[$choice]}" "${name_of[$choice]}" "${sec_of[$choice]}" "${state_of[$choice]}" ;;
+	info)
+		case "${name_of[$choice]}" in
+			Ethernet*) note "Plug in the network cable first" ;;
+			iPhone*)   note "On the iPhone: tap Trust if it asks, then turn on Personal Hotspot" ;;
+			*)         note "On the phone: turn on USB tethering (Settings → Hotspot & tethering)" ;;
+		esac ;;
 esac

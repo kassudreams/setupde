@@ -31,7 +31,7 @@ PKGS=(
 	swaybg swaylock swayidle wlsunset
 	grim slurp swappy wl-clipboard cliphist
 	brightnessctl playerctl pavucontrol libnotify-bin
-	network-manager-gnome
+	network-manager-gnome usbmuxd
 	thunar thunar-archive-plugin gvfs tumbler
 	fonts-inter fonts-noto-color-emoji fonts-dejavu-core
 	papirus-icon-theme adwaita-icon-theme
