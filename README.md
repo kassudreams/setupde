@@ -93,10 +93,13 @@ borders, blur, animations), `windows.lua` (floating rules, cascading, workspace 
   new Wi-Fi), then disconnects the others; VPNs aren't touched. `✓ in use` marks the one the
   internet goes through. Hover the icon for the network name, IP and speed. nm-applet is no longer
   in the tray
-* **Phone over USB:** plug it in and turn on tethering. iPhone: tap *Trust*, then turn on Personal
-  Hotspot (`usbmuxd`, installed by the installer, does the pairing). Android: *USB tethering* under
-  Hotspot & tethering. An iPhone's Wi-Fi hotspot only shows up while its Personal Hotspot screen is
-  open; use *Scan for Wi-Fi again* in the menu
+* **Phone over USB:** Android needs nothing extra. Plug it in, tap the USB notification on the phone
+  and choose *USB tethering* (or Settings → Hotspot & tethering). NetworkManager connects it by itself
+  and it takes over from Wi-Fi; Ethernet stays first while it's connected. To make the phone tether
+  every time it's plugged in: Developer options → *Default USB configuration* → *USB tethering*.
+  iPhone: tap *Trust*, then turn on Personal Hotspot (`usbmuxd`, installed by the installer, does
+  the pairing). An iPhone's Wi-Fi hotspot only shows up while its Personal Hotspot screen is open;
+  use *Scan for Wi-Fi again* in the menu
 
 **HDR:** the monitor runs at 10-bit, and `setupde-hdr auto` (the default) switches the screen to HDR
 whenever a fullscreen game or video outputs HDR. `setupde-hdr on` keeps HDR on all the time,

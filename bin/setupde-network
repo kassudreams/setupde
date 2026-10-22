@@ -11,7 +11,7 @@
 #   - "Network settings" opens the full NetworkManager editor (VPNs, static IP, ...)
 
 menu() { fuzzel --dmenu --prompt "$1" --width 50 --lines "${2:-14}"; }
-note() { notify-send -t 4000 -i network-wired "Network" "$1" 2>/dev/null || true; }
+note() { notify-send -t "${2:-4000}" -i network-wired "Network" "$1" 2>/dev/null || true; }
 
 wifi_icon() { # signal % -> icon, like the panel
 	local s=$1
@@ -132,6 +132,13 @@ while IFS=: read -r dev type state; do
 	dev_of[$label]="$dev"; name_of[$label]="$name"; state_of[$label]="$state"
 done < <(devices)
 
+# An Android phone only shows up as a network device while USB tethering is
+# on, so without one say how to get it
+if [ -z "${seen_name[Phone (USB)]+x}" ] && [ -z "${seen_name[iPhone (USB)]+x}" ]; then
+	label="󰄜  Phone (USB)  (plug in, turn on USB tethering)"
+	items+=("$label"); kind[$label]=info; name_of[$label]="Phone (USB)"
+fi
+
 # Wi-Fi networks, strongest first
 rescan=auto
 [ "${1:-}" = --rescan ] && rescan=yes
@@ -178,8 +185,8 @@ case "${kind[$choice]}" in
 	wifi)  use_wifi "${dev_of[$choice]}" "${name_of[$choice]}" "${sec_of[$choice]}" "${state_of[$choice]}" ;;
 	info)
 		case "${name_of[$choice]}" in
-			Ethernet*) note "Plug in the network cable first" ;;
-			iPhone*)   note "On the iPhone: tap Trust if it asks, then turn on Personal Hotspot" ;;
-			*)         note "On the phone: turn on USB tethering (Settings → Hotspot & tethering)" ;;
+			Ethernet*) note "Plug in the network cable first" 8000 ;;
+			iPhone*)   note "On the iPhone: tap Trust if it asks, then turn on Personal Hotspot" 8000 ;;
+			*)         note "Plug in the phone, tap the USB notification on it and choose USB tethering (or Settings → Hotspot & tethering → USB tethering). It shows up here once it's on." 8000 ;;
 		esac ;;
 esac
