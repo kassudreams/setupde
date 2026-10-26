@@ -214,7 +214,8 @@ fi
 step "Installing helper scripts to /usr/local/bin"
 for f in setupde-powermenu setupde-screenshot setupde-clipboard setupde-rebuild-plugins \
          setupde-dock setupde-sysinfo setupde-nightlight setupde-network setupde-fireface setupde-hdr \
-         setupde-gamemode setupde-plugin-check setupde-snapshot setupde-vpn; do
+         setupde-gamemode setupde-plugin-check setupde-snapshot setupde-vpn \
+         setupde-audio; do
 	sudo install -m 755 "$REPO_DIR/bin/$f" /usr/local/bin/
 	echo "    $f"
 done

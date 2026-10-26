@@ -1,9 +1,12 @@
 #!/bin/bash
 # RME Fireface (class compliant mode) -> AES/EBU -> Genelec monitors, for PipeWire.
 #
-#   setupde-fireface              set everything up (output channels 9-10 = AES)
-#   setupde-fireface setup 9      same, naming the first AES channel explicitly
-#   setupde-fireface test 9       play a short tone on channels 9-10 to check
+#   setupde-fireface              set everything up (output channels 3-4 = AES)
+#   setupde-fireface setup 9      same, with the AES output on channels 9-10
+#   setupde-fireface test 3       play a short tone on channels 3-4 to check
+#   setupde-fireface headphones 7 also add "Headphones (Fireface)" on channels 7-8,
+#                                 for headphones plugged into the Fireface (pick
+#                                 it with the volume icon in the panel)
 #   setupde-fireface channels     show what PipeWire sees on the card
 #   setupde-fireface levels       show every volume stage between apps and the AES out
 #   setupde-fireface max          set all of them to full (0 dB) - then use the
@@ -17,15 +20,27 @@
 #   3. keeps the card from suspending, so the Genelecs don't lose the digital
 #      signal (and click / mute) every time audio stops
 #
-# Channel numbers are 1-based, as on the Fireface. On the UCX II the AES/SPDIF
-# output is normally channels 9-10 (after 8 analog outputs). If the test tone
-# comes out somewhere else, run `setupde-fireface test N` with other numbers.
+# Channel numbers are 1-based, as on the Fireface. Which playback channels
+# reach the AES output depends on the Fireface's own routing: on this UCX II in
+# CC mode it's channels 3-4 (playback_AUX2/AUX3 in qpwgraph), on a factory
+# reset one usually 9-10. If the test tone comes out somewhere else, run
+# `setupde-fireface test N` with other numbers, then `setupde-fireface setup N`.
 
 set -u
 CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
 PW_CONF="$CONF/pipewire/pipewire.conf.d/60-setupde-genelec-aes.conf"
+PHONES_CONF="$CONF/pipewire/pipewire.conf.d/61-setupde-fireface-phones.conf"
 WP_CONF="$CONF/wireplumber/wireplumber.conf.d/60-setupde-fireface.conf"
 SINK_NAME="genelec_aes"
+PHONES_NAME="fireface_phones"
+DEFAULT_FIRST=3 # AES output: playback channels 3-4 on this Fireface
+
+# First AES channel of the current setup, or the default
+current_first() {
+	local n
+	n="$(grep -o 'AUX[0-9]*' "$PW_CONF" 2>/dev/null | head -n1 | tr -dc 0-9)"
+	if [ -n "$n" ]; then echo $((n + 1)); else echo "$DEFAULT_FIRST"; fi
+}
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -54,8 +69,36 @@ aux_pair() { # 1-based first channel -> "AUXn AUXn+1"
 	echo "AUX$n AUX$((n + 1))"
 }
 
+# loopback FILE NODE_NAME DESCRIPTION FIRST_CHANNEL PRO_SINK: a stereo output
+# that feeds two channels of the card
+loopback() {
+	cat > "$1" <<EOF
+# Written by setupde-fireface: stereo output "$3" -> Fireface channels $4-$(($4 + 1))
+context.modules = [
+  { name = libpipewire-module-loopback
+    args = {
+      node.description = "$3"
+      capture.props = {
+        node.name      = "$2"
+        media.class    = "Audio/Sink"
+        audio.position = [ FL FR ]
+      }
+      playback.props = {
+        node.name          = "$2.output"
+        audio.position     = [ $(aux_pair "$4") ]
+        target.object      = "$5"
+        node.dont-reconnect = true
+        stream.dont-remix  = true
+        node.passive       = true
+      }
+    }
+  }
+]
+EOF
+}
+
 setup() {
-	local first="${1:-9}" c s pos
+	local first="${1:-$DEFAULT_FIRST}" c s pos
 	command -v pactl >/dev/null || die "pactl not found (sudo apt install pulseaudio-utils)"
 	c="$(card)" || die "no RME / Fireface card found - is it plugged in and in CC mode?"
 	echo "==> Found $c"
@@ -70,28 +113,8 @@ setup() {
 	pos="$(aux_pair "$first")"
 	echo "==> Creating the stereo 'Genelec 8330A (AES)' output on channels $first-$((first + 1)) ($pos)"
 	mkdir -p "$(dirname "$PW_CONF")" "$(dirname "$WP_CONF")"
-	cat > "$PW_CONF" <<EOF
-# Written by setupde-fireface: stereo output -> Fireface AES/EBU -> Genelecs
-context.modules = [
-  { name = libpipewire-module-loopback
-    args = {
-      node.description = "Genelec 8330A (AES)"
-      capture.props = {
-        node.name      = "$SINK_NAME"
-        media.class    = "Audio/Sink"
-        audio.position = [ FL FR ]
-      }
-      playback.props = {
-        node.name          = "$SINK_NAME.output"
-        audio.position     = [ $pos ]
-        target.object      = "$s"
-        node.dont-reconnect = true
-        stream.dont-remix  = true
-        node.passive       = true
-      }
-    }
-  }
-]
+	loopback "$PW_CONF" "$SINK_NAME" "Genelec 8330A (AES)" "$first" "$s"
+	cat >> "$PW_CONF" <<EOF
 
 # Follow the music's sample rate instead of resampling everything to 48 kHz
 # (the Genelecs relock for a moment when the rate changes)
@@ -130,6 +153,20 @@ EOF
 	fi
 }
 
+headphones() {
+	local first="${1:-7}" c s
+	c="$(card)" || die "no RME / Fireface card found - is it plugged in and in CC mode?"
+	s="$(pro_sink "$c")"
+	[ -n "$s" ] || die "set up the Genelecs first: setupde-fireface setup"
+	echo "==> Adding 'Headphones (Fireface)' on channels $first-$((first + 1)) ($(aux_pair "$first"))"
+	loopback "$PHONES_CONF" "$PHONES_NAME" "Headphones (Fireface)" "$first" "$s"
+	systemctl --user restart wireplumber pipewire pipewire-pulse
+	echo
+	echo "Done. Pick 'Headphones (Fireface)' with the volume icon in the panel."
+	echo "No sound in the headphones? Find their channels with  setupde-fireface test N"
+	echo "(try 5, 7, 9, ...), then run  setupde-fireface headphones N"
+}
+
 tone() { # write a short 440 Hz stereo tone (left first, then right) to $1
 	python3 - "$1" <<'EOF'
 import math, struct, sys, wave
@@ -146,7 +183,7 @@ EOF
 }
 
 test_tone() {
-	local first="${1:-9}" c s tmp
+	local first="${1:-$(current_first)}" c s tmp
 	c="$(card)" || die "no RME / Fireface card found"
 	s="$(pro_sink "$c")"
 	[ -n "$s" ] || die "card isn't in Pro Audio mode - run: setupde-fireface setup"
@@ -210,17 +247,18 @@ max() {
 }
 
 remove() {
-	rm -f "$PW_CONF" "$WP_CONF"
+	rm -f "$PW_CONF" "$PHONES_CONF" "$WP_CONF"
 	systemctl --user restart wireplumber pipewire pipewire-pulse
 	echo "Removed the setupde Fireface config."
 }
 
 case "${1:-setup}" in
-	setup)    setup "${2:-9}" ;;
-	test)     test_tone "${2:-9}" ;;
+	setup)    setup "${2:-$DEFAULT_FIRST}" ;;
+	test)     test_tone "${2:-}" ;;
+	headphones) headphones "${2:-7}" ;;
 	channels) channels ;;
 	levels)   levels ;;
 	max)      max ;;
 	remove)   remove ;;
-	*) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+	*) sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

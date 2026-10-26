@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+"""Sound output menu (click the volume icon in the panel).
+
+  setupde-audio          pick where sound goes: Genelecs, headphones,
+                         monitor speakers, Bluetooth, ...
+  setupde-audio next     switch to the next output
+
+Picking an output makes it the default and moves everything that's playing
+to it. Onboard audio with several jacks (headphones, line out) gets a line
+per jack. The Fireface's raw channels are hidden once the Genelec output
+exists (setupde-fireface): that output is what feeds them.
+"""
+import json
+import subprocess
+import sys
+
+ICON = {"speaker": "\U000F04C3", "headphones": "\U000F02CB", "monitor": "\U000F0379",
+        "bluetooth": "\U000F00AF", "settings": "\U000F0493"}
+OURS = ("genelec_aes", "fireface_phones")  # outputs made by setupde-fireface
+
+
+def run(*args):
+    return subprocess.run(args, capture_output=True, text=True).stdout
+
+
+def pactl_json(what):
+    try:
+        return json.loads(run("pactl", "-f", "json", "list", what) or "[]")
+    except ValueError:
+        return []
+
+
+def notify(text):
+    subprocess.run(["notify-send", "-t", "2500", "-i", "audio-speakers", "Sound", text],
+                   capture_output=True)
+
+
+def is_hdmi(sink, props):
+    text = " ".join([sink.get("name", ""), props.get("device.profile.name", ""),
+                     props.get("device.profile.description", "")]).lower()
+    return "hdmi" in text or "displayport" in text
+
+
+def describe(sink):
+    """(label, icon) for a whole output."""
+    name, props = sink.get("name", ""), sink.get("properties", {})
+    desc = sink.get("description") or name
+    if name == "fireface_phones":
+        return desc, ICON["headphones"]
+    if name in OURS:
+        return desc, ICON["speaker"]
+    if name.startswith("bluez_output") or props.get("device.bus") == "bluetooth":
+        return props.get("device.description") or desc, ICON["bluetooth"]
+    if is_hdmi(sink, props):
+        nick = props.get("node.nick", "")
+        if nick and "hdmi" not in nick.lower() and "displayport" not in nick.lower():
+            return "Monitor speakers (%s)" % nick, ICON["monitor"]
+        return "Monitor speakers", ICON["monitor"]
+    if props.get("device.form_factor") in ("headset", "headphone"):
+        return desc, ICON["headphones"]
+    if props.get("device.bus") == "pci":
+        return "PC audio", ICON["speaker"]
+    return desc, ICON["speaker"]
+
+
+def outputs():
+    sinks = pactl_json("sinks")
+    have_ours = any(s.get("name") in OURS for s in sinks)
+    items = []
+    for sink in sinks:
+        name = sink.get("name", "")
+        if have_ours and "pro-output" in name:
+            continue
+        all_ports = sink.get("ports") or []
+        ports = [p for p in all_ports if p.get("availability") != "not available"]
+        if all_ports and not ports:
+            continue  # nothing plugged in, e.g. HDMI without a monitor
+        label, icon = describe(sink)
+        # onboard audio: one line per jack (headphones, line out, ...)
+        per_jack = sink.get("properties", {}).get("device.bus") == "pci" and not is_hdmi(
+            sink, sink.get("properties", {}))
+        if per_jack and ports:
+            for p in ports:
+                jack = p.get("description") or p.get("name", "")
+                jicon = ICON["headphones"] if "headphone" in p.get("name", "").lower() else icon
+                items.append({"sink": name, "port": p.get("name"),
+                              "label": "%s (%s)" % (jack, label), "icon": jicon,
+                              "active": sink.get("active_port") == p.get("name")})
+        else:
+            items.append({"sink": name, "port": None, "label": label, "icon": icon,
+                          "active": True})
+    return items
+
+
+def current_index(items):
+    default = run("pactl", "get-default-sink").strip()
+    for i, it in enumerate(items):
+        if it["sink"] == default and it["active"]:
+            return i
+    return -1
+
+
+def switch(item):
+    if item["port"]:
+        run("pactl", "set-sink-port", item["sink"], item["port"])
+    run("pactl", "set-default-sink", item["sink"])
+    # move what's playing; leave pinned streams alone (the Genelec output's
+    # own link to the Fireface is one of them)
+    for si in pactl_json("sink-inputs"):
+        props = si.get("properties", {})
+        if str(props.get("node.dont-reconnect", "")).lower() == "true":
+            continue
+        if props.get("node.name", "").split(".")[0] in OURS:
+            continue
+        run("pactl", "move-sink-input", str(si.get("index")), item["sink"])
+    notify("Now playing on: " + item["label"])
+
+
+def menu(items):
+    cur = current_index(items)
+    lines = ["%s  %s%s" % (it["icon"], it["label"], "  ✓" if i == cur else "")
+             for i, it in enumerate(items)]
+    lines.append("%s  Sound settings…" % ICON["settings"])
+    res = subprocess.run(["fuzzel", "--dmenu", "--index", "--prompt", "Sound: ", "--width", "46",
+                          "--lines", str(min(len(lines), 10))],
+                         input="\n".join(lines) + "\n", capture_output=True, text=True)
+    pick = res.stdout.strip()
+    if not pick.isdigit():
+        return
+    i = int(pick)
+    if i == len(items):
+        subprocess.Popen(["pavucontrol"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+    elif i != cur:
+        switch(items[i])
+
+
+def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "menu"
+    items = outputs()
+    if cmd == "menu":
+        if not items:
+            notify("No sound outputs found")
+            return
+        menu(items)
+    elif cmd == "next":
+        if items:
+            switch(items[(current_index(items) + 1) % len(items)])
+    else:
+        print(__doc__)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

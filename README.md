@@ -93,6 +93,10 @@ borders, blur, animations), `windows.lua` (floating rules, cascading, workspace 
   new Wi-Fi), then disconnects the others; VPNs aren't touched. `✓ in use` marks the one the
   internet goes through. Hover the icon for the network name, IP and speed. nm-applet is no longer
   in the tray
+* **Sound output:** click the volume icon to choose where sound goes: the Genelecs, headphones,
+  monitor speakers (HDMI/DisplayPort), Bluetooth, ... What's playing moves over right away.
+  Scroll on the icon for volume, right-click mutes, middle-click opens the full sound settings.
+  `setupde-audio next` switches to the next output (for a key, if you want one)
 * **Mullvad VPN:** run `setupde-vpn install` once (adds Mullvad's apt repository, installs the app
   and asks for your account number). A lock next to the network icon shows the VPN: green with the
   country while connected, grey when off, red when internet is blocked. Click it for connect /
@@ -330,14 +334,18 @@ For an RME Fireface (UCX II and others) in **class compliant mode** feeding acti
 AES/EBU, run once with the interface plugged in:
 
 ```sh
-setupde-fireface          # set up (AES = output channels 9-10, the UCX II default)
-setupde-fireface test 9   # tone on channel 9 (left), then 10 (right)
+setupde-fireface          # set up (AES = output channels 3-4)
+setupde-fireface test     # tone on channel 3 (left), then 4 (right)
 ```
 
-Which playback channels reach the AES output depends on the Fireface's own routing. On one UCX II in
-CC mode it was **channels 3-4** (`playback_AUX2` / `playback_AUX3` in qpwgraph), so use
-`setupde-fireface setup 3` there. Patching in qpwgraph by hand works too, but it's lost when
-PipeWire restarts. `setup N` makes it permanent.
+Which playback channels reach the AES output depends on the Fireface's own routing. On this UCX II in
+CC mode it's **channels 3-4** (`playback_AUX2` / `playback_AUX3` in qpwgraph), the default; after a
+factory reset it's usually 9-10, so use `setupde-fireface setup 9` then. Patching in qpwgraph by hand
+works too, but it's lost when PipeWire restarts. `setup` makes it permanent.
+
+**Headphones on the Fireface:** `setupde-fireface headphones 7` adds a second output,
+"Headphones (Fireface)", on channels 7-8 (find the right ones with `setupde-fireface test 7`,
+`test 5`, ...). Switch between it and the Genelecs with the volume icon.
 
 It switches the card to PipeWire's *Pro Audio* profile, creates a stereo **"Genelec 8330A (AES)"**
 output mapped to the AES channels and makes it the default (the panel's volume controls it),

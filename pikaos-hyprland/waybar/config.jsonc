@@ -107,7 +107,9 @@
     "format-icons": { "headphone": "", "default": ["", "", ""] },
     "scroll-step": 5,
     "max-volume": 100,
-    "on-click": "pavucontrol",
+    "tooltip-format": "{desc}  {volume}%\nClick: choose the output   Right-click: mute\nMiddle-click: sound settings",
+    "on-click": "setupde-audio",
+    "on-click-middle": "pavucontrol",
     "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
   },
 
