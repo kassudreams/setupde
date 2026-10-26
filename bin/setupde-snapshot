@@ -9,12 +9,18 @@
 #                                 every update from now on, take the first one
 #   setupde-snapshot now [note]   take a snapshot now
 #   setupde-snapshot list         show the snapshots
+#   setupde-snapshot restore      go back to a snapshot (asks which one first;
+#                                 the PC restarts when it's done)
 #   setupde-snapshot remove       stop taking snapshots before updates
 #
 # Before updates (apt, PikaOS updates) a snapshot is taken at most every
 # 3 hours, and only the newest 5 of those are kept. Snapshots taken with
 # `now` stay until you delete them (Timeshift app, or
 # sudo timeshift --delete --snapshot NAME).
+#
+# Snapshots include /boot (kernels and their booster images), so after going
+# back the kernels match the drivers again. rEFInd finds the kernels in /boot
+# by itself, so Timeshift's GRUB step is skipped (there's no GRUB here).
 
 set -u
 
@@ -103,6 +109,39 @@ prune() {
 	done
 }
 
+restore() {
+	command -v timeshift >/dev/null || die "Timeshift isn't set up yet (setupde-snapshot setup)"
+	local names=() notes=() d i n pick ok name
+	for d in "$REPO"/*/; do
+		[ -f "$d/info.json" ] || continue
+		names+=("$(basename "$d")")
+		notes+=("$(sed -n 's/.*"comments" *: *"\(.*\)".*/\1/p' "$d/info.json" | head -n1)")
+	done
+	[ "${#names[@]}" -gt 0 ] || die "no snapshots found (setupde-snapshot list)"
+
+	echo "Snapshots, newest first:"
+	n=1
+	for ((i = ${#names[@]} - 1; i >= 0; i--)); do
+		printf '  %2d   %s   %s\n' "$n" "${names[$i]}" "${notes[$i]}"
+		n=$((n + 1))
+	done
+	echo
+	read -rp "Go back to which one? Number (Enter = cancel): " pick
+	case "$pick" in ''|*[!0-9]*) echo "Cancelled."; return 0 ;; esac
+	if [ "$pick" -lt 1 ] || [ "$pick" -gt "${#names[@]}" ]; then
+		echo "There's no number $pick. Cancelled."; return 0
+	fi
+	name="${names[$((${#names[@]} - pick))]}"
+
+	echo
+	echo "The system goes back to $name: programs, drivers, settings in /etc"
+	echo "and the kernels in /boot. Your files in /home, Guix and Flatpak apps"
+	echo "stay as they are. The PC restarts by itself when it's done."
+	read -rp "Type yes to go ahead: " ok
+	[ "$ok" = yes ] || { echo "Cancelled."; return 0; }
+	exec timeshift --restore --snapshot "$name" --target "$(findmnt -no SOURCE /)" --skip-grub --yes
+}
+
 # From the apt hook: never stops an update, even if the snapshot fails
 auto() {
 	[ -f "$CONF" ] && command -v timeshift >/dev/null || return 0
@@ -123,9 +162,10 @@ case "${1:-}" in
 	setup)  setup ;;
 	now)    shift; timeshift --create --comments "${*:-setupde: taken by hand}" --scripted ;;
 	list)   timeshift --list --scripted ;;
+	restore) restore ;;
 	auto)   auto ;;
 	remove) rm -f "$HOOK"
 	        echo "No more snapshots before updates. The ones you have are kept;"
 	        echo "delete them in the Timeshift app if you need the space." ;;
-	*)      sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+	*)      sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
