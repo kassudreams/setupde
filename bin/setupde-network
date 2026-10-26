@@ -8,6 +8,7 @@
 #     through the old one. VPNs (Mullvad, ...) aren't touched.
 #   - "Scan for Wi-Fi again": an iPhone hotspot only shows up while the
 #     phone's Personal Hotspot screen is open
+#   - "VPN" opens the Mullvad VPN menu (setupde-vpn), if Mullvad is installed
 #   - "Network settings" opens the full NetworkManager editor (VPNs, static IP, ...)
 
 menu() { fuzzel --dmenu --prompt "$1" --width 50 --lines "${2:-14}"; }
@@ -164,6 +165,13 @@ if [ -n "$wifi_dev" ] && wifi_on; then
 fi
 
 extra=()
+if command -v mullvad >/dev/null; then
+	case "$(mullvad status 2>/dev/null | head -n1)" in
+		Connected)   extra+=("󰌾  VPN: connected…") ;;
+		Connecting*) extra+=("󰌾  VPN: connecting…") ;;
+		*)           extra+=("󰌿  VPN: off…") ;;
+	esac
+fi
 if [ -n "$wifi_dev" ]; then
 	if wifi_on; then extra+=("󰑐  Scan for Wi-Fi again" "󰖪  Turn Wi-Fi off")
 	else extra+=("󰖩  Turn Wi-Fi on"); fi
@@ -175,6 +183,7 @@ choice="$(printf '%s\n' "${items[@]}" "${extra[@]}" | menu "Network: ")"
 
 case "$choice" in
 	*"Scan for Wi-Fi again") exec "$0" --rescan ;;
+	*"  VPN: "*)             exec setupde-vpn ;;
 	*"Turn Wi-Fi off")       nmcli radio wifi off && note "Wi-Fi turned off"; exit 0 ;;
 	*"Turn Wi-Fi on")        nmcli radio wifi on && note "Wi-Fi turned on"; exit 0 ;;
 	*"Network settings…")    nm-connection-editor >/dev/null 2>&1 & exit 0 ;;

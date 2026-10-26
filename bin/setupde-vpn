@@ -1,0 +1,229 @@
+#!/bin/bash
+# Mullvad VPN in the panel (lock icon, next to the network icon) and in the
+# network menu.
+#   setupde-vpn             menu: connect / disconnect, location, settings
+#   setupde-vpn toggle      connect <-> disconnect (right-click the lock)
+#   setupde-vpn watch       panel JSON, again on every change (waybar runs it)
+#   setupde-vpn status      panel JSON once
+#   setupde-vpn install     install Mullvad VPN and log in
+#
+# The lock is green while connected and shows the country (SE, FI, ...),
+# yellow while connecting, red when internet is blocked (lockdown mode) and
+# grey when the VPN is off. It's hidden until Mullvad is installed.
+
+menu() { fuzzel --dmenu --prompt "$1" --width 46 --lines "${2:-12}"; }
+note() { notify-send -t 4000 -i network-vpn "Mullvad VPN" "$1" 2>/dev/null || true; }
+have() { command -v mullvad >/dev/null; }
+
+esc() { local s=${1//\\/\\\\}; s=${s//\"/\\\"}; printf '%s' "${s//$'\n'/\\n}"; }
+json() { printf '{"text": "%s", "tooltip": "%s", "class": "%s"}\n' "$(esc "$1")" "$(esc "$2")" "$3"; }
+
+# STATE, PLACE ("Sweden, Gothenburg"), IP and COUNTRY (SE) from `mullvad status`
+read_status() {
+	local out loc relay
+	STATE=""; PLACE=""; IP=""; COUNTRY=""; LOCKED=0
+	out="$(mullvad status 2>/dev/null)" || return 1
+	STATE="$(head -n1 <<<"$out")"
+	loc="$(sed -n 's/^ *Visible location: *//p' <<<"$out" | head -n1)"
+	relay="$(sed -n 's/^ *Relay: *//p' <<<"$out" | head -n1)"
+	PLACE="${loc%%. IPv4*}"
+	case "$loc" in *"IPv4: "*) IP="${loc#*IPv4: }"; IP="${IP%%,*}" ;; esac
+	[ -n "$relay" ] && { COUNTRY="${relay%%-*}"; COUNTRY="${COUNTRY^^}"; }
+	grep -q 'blocked due to lockdown' <<<"$out" && LOCKED=1
+	return 0
+}
+
+status() {
+	if ! have; then echo '{"text": ""}'; return; fi
+	if ! read_status; then
+		json "󰌿" "Mullvad VPN isn't running
+Start it: sudo systemctl enable --now mullvad-daemon" blocked
+		return
+	fi
+	local where="$PLACE${IP:+  ($IP)}"
+	case "$STATE" in
+		Connected)      json "󰌾 $COUNTRY" "Mullvad VPN: connected
+$where
+
+Click: menu   Right-click: disconnect" on ;;
+		Connecting*)    json "󰌾" "Mullvad VPN: connecting…" connecting ;;
+		Disconnecting*) json "󰌿" "Mullvad VPN: disconnecting…" connecting ;;
+		Disconnected*)
+			if [ "$LOCKED" = 1 ]; then
+				json "󰌾" "Mullvad VPN: off, and internet is blocked (lockdown mode)
+
+Click: menu   Right-click: connect" blocked
+			else
+				json "󰌿" "Mullvad VPN: off${where:+
+Without it: $where}
+
+Click: menu   Right-click: connect" off
+			fi ;;
+		*)              json "󰌾" "Mullvad VPN: $STATE" blocked ;;
+	esac
+}
+
+watch() {
+	status
+	have || exit 0 # waybar starts this again later (restart-interval)
+	# one line per change; wait for the rest of an event before redrawing
+	mullvad status listen 2>/dev/null | while IFS= read -r _; do
+		while IFS= read -r -t 0.3 _; do :; done
+		status
+	done
+	status # the service stopped
+}
+
+logged_in() { ! mullvad account get 2>/dev/null | grep -qi 'not logged in'; }
+
+toggle() {
+	read_status || { note "Mullvad VPN isn't running"; return 1; }
+	case "$STATE" in
+		Connected|Connecting*) mullvad disconnect >/dev/null 2>&1 ;;
+		*) logged_in || { note "Log in first: click the lock"; return 1; }
+		   mullvad connect >/dev/null 2>&1 ;;
+	esac
+}
+
+get_on() { mullvad "$@" get 2>/dev/null | grep -q ': on$\|: allow$'; } # e.g. get_on auto-connect
+
+choose_location() {
+	local list countries=() codes=() line name code pick i cities=() ccodes=()
+	list="$(mullvad relay list 2>/dev/null)"
+	while IFS= read -r line; do
+		case "$line" in
+			$'\t'*|"") continue ;;
+			*" ("??")") name="${line% (*}"; code="${line##* (}"; countries+=("$name"); codes+=("${code%)}") ;;
+		esac
+	done <<<"$list"
+	[ "${#countries[@]}" -gt 0 ] || { note "Couldn't get the list of locations"; return 1; }
+
+	pick="$( { echo "󰍎  Any (fastest)"; printf '%s\n' "${countries[@]}"; } | menu "Country: " 16)"
+	[ -n "$pick" ] || return 0
+	if [ "$pick" = "󰍎  Any (fastest)" ]; then
+		mullvad relay set location any >/dev/null && note "Location: any"
+		return
+	fi
+	for i in "${!countries[@]}"; do [ "${countries[$i]}" = "$pick" ] && code="${codes[$i]}"; done
+	[ -n "$code" ] || return 0
+
+	# cities of that country: tab-indented lines after "Country (cc)"
+	while IFS= read -r line; do
+		name="${line#$'\t'}"; name="${name% @*}"
+		cities+=("${name% (*}"); ccodes+=("$(sed 's/.*(\(.*\))/\1/' <<<"$name")")
+	done < <(awk -v c="$pick ($code)" '$0 == c { on = 1; next } /^[^\t]/ { on = 0 } on && /^\t[^\t]/' <<<"$list")
+
+	if [ "${#cities[@]}" -gt 1 ]; then
+		local city
+		city="$( { echo "Any city"; printf '%s\n' "${cities[@]}"; } | menu "City in $pick: " 14)"
+		[ -n "$city" ] || return 0
+		for i in "${!cities[@]}"; do
+			if [ "${cities[$i]}" = "$city" ]; then
+				mullvad relay set location "$code" "${ccodes[$i]}" >/dev/null && note "Location: $city, $pick"
+				return
+			fi
+		done
+	fi
+	mullvad relay set location "$code" >/dev/null && note "Location: $pick"
+}
+
+login() {
+	local number
+	number="$(printf '' | fuzzel --dmenu --password --prompt "Mullvad account number: " --lines 0 --width 46)"
+	number="${number// /}"
+	[ -n "$number" ] || return 0
+	if mullvad account login "$number" >/dev/null 2>&1; then note "Logged in"; else note "Couldn't log in: check the number"; fi
+}
+
+open_menu() {
+	if ! have; then
+		local pick
+		pick="$(printf '%s\n' "󰌆  Install Mullvad VPN…" | menu "VPN: " 1)"
+		[ -n "$pick" ] && foot -T "Install Mullvad VPN" sh -c 'setupde-vpn install; echo; echo "Press Enter to close."; read _' &
+		return
+	fi
+	read_status || { note "Mullvad VPN isn't running. Start it: sudo systemctl enable --now mullvad-daemon"; return 1; }
+
+	local items=() head pick box_on="☑" box_off="☐" b
+	case "$STATE" in
+		Connected) head="󰌾  Connected: $PLACE" ;;
+		Disconnected*) head="󰌿  Off$([ "$LOCKED" = 1 ] && echo ", internet blocked")" ;;
+		*) head="󰌾  $STATE" ;;
+	esac
+	items+=("$head")
+	if ! logged_in; then
+		items+=("󰌆  Log in with your account number…")
+	else
+		case "$STATE" in
+			Connected|Connecting*) items+=("󰌿  Disconnect" "󰑐  Another server") ;;
+			*) items+=("󰌾  Connect") ;;
+		esac
+		items+=("󰍎  Location…")
+	fi
+	get_on auto-connect   && b=$box_on || b=$box_off; items+=("$b  Connect when the computer starts")
+	get_on lockdown-mode  && b=$box_on || b=$box_off; items+=("$b  Block internet when the VPN is off")
+	get_on lan            && b=$box_on || b=$box_off; items+=("$b  Allow local network (printers, phones)")
+	command -v mullvad-vpn >/dev/null && items+=("󰏖  Open the Mullvad app")
+
+	pick="$(printf '%s\n' "${items[@]}" | menu "VPN: ")"
+	case "$pick" in
+		""|"$head") ;;
+		*"Log in"*)       login ;;
+		*"  Connect")     mullvad connect >/dev/null 2>&1 ;;
+		*"  Disconnect")  mullvad disconnect >/dev/null 2>&1 ;;
+		*"Another server") mullvad reconnect >/dev/null 2>&1 ;;
+		*"Location…")     choose_location ;;
+		"$box_on  Connect when"*)  mullvad auto-connect set off >/dev/null ;;
+		"$box_off  Connect when"*) mullvad auto-connect set on >/dev/null ;;
+		"$box_on  Block internet"*)  mullvad lockdown-mode set off >/dev/null ;;
+		"$box_off  Block internet"*) mullvad lockdown-mode set on >/dev/null ;;
+		"$box_on  Allow local"*)  mullvad lan set block >/dev/null ;;
+		"$box_off  Allow local"*) mullvad lan set allow >/dev/null ;;
+		*"Mullvad app")   setsid mullvad-vpn >/dev/null 2>&1 & ;;
+	esac
+}
+
+install() {
+	local list=/etc/apt/sources.list.d/mullvad.list key=/usr/share/keyrings/mullvad-keyring.asc tmp
+	if have; then
+		echo "Mullvad VPN is already installed."
+	elif apt-cache show mullvad-vpn >/dev/null 2>&1; then
+		sudo apt-get install -y mullvad-vpn
+	else
+		echo "==> Adding Mullvad's apt repository (updates come with the system's)"
+		if sudo curl -fsSLo "$key" https://repository.mullvad.net/deb/mullvad-keyring.asc &&
+			echo "deb [signed-by=$key arch=$(dpkg --print-architecture)] https://repository.mullvad.net/deb/stable stable main" |
+				sudo tee "$list" >/dev/null &&
+			sudo apt-get update && sudo apt-get install -y mullvad-vpn; then
+			:
+		else
+			# don't leave a broken repository behind: it would break apt update
+			sudo rm -f "$list"
+			echo "==> The repository didn't work, downloading the package from mullvad.net instead"
+			tmp="$(mktemp -d)"
+			curl -fL -o "$tmp/mullvad.deb" https://mullvad.net/download/app/deb/latest &&
+				sudo apt-get install -y "$tmp/mullvad.deb"
+			rm -rf "$tmp"
+		fi
+	fi
+	have || { echo "Mullvad VPN couldn't be installed (see above)."; return 1; }
+	sudo systemctl enable --now mullvad-daemon >/dev/null 2>&1
+	sleep 2
+	if ! logged_in; then
+		local number
+		read -rp "Your Mullvad account number (Enter = later, from the lock icon): " number
+		number="${number// /}"
+		[ -n "$number" ] && mullvad account login "$number"
+	fi
+	echo
+	echo "Done. Click the lock icon in the panel to connect."
+}
+
+case "${1:-menu}" in
+	menu)    open_menu ;;
+	toggle)  toggle ;;
+	status)  status ;;
+	watch)   watch ;;
+	install) install ;;
+	*)       sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

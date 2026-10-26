@@ -93,6 +93,13 @@ borders, blur, animations), `windows.lua` (floating rules, cascading, workspace 
   new Wi-Fi), then disconnects the others; VPNs aren't touched. `✓ in use` marks the one the
   internet goes through. Hover the icon for the network name, IP and speed. nm-applet is no longer
   in the tray
+* **Mullvad VPN:** run `setupde-vpn install` once (adds Mullvad's apt repository, installs the app
+  and asks for your account number). A lock next to the network icon shows the VPN: green with the
+  country while connected, grey when off, red when internet is blocked. Click it for connect /
+  disconnect, location (country and city), *connect when the computer starts*, *block internet when
+  the VPN is off* and *allow local network*. Right-click connects or disconnects. The network menu
+  has a VPN line too. To keep a game out of the VPN (lower ping, no VPN warnings), set Lutris →
+  Configure → System options → *Command prefix* to `mullvad-exclude`
 * **Phone over USB:** Android needs nothing extra. Plug it in, tap the USB notification on the phone
   and choose *USB tethering* (or Settings → Hotspot & tethering). NetworkManager connects it by itself
   and it takes over from Wi-Fi; Ethernet stays first while it's connected. To make the phone tether

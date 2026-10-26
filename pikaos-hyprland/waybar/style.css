@@ -130,6 +130,17 @@ tooltip label { color: @text; }
 }
 #custom-nightlight.on { color: @yellow; }
 
+#custom-vpn {
+  background: @surface0;
+  margin: 4px 0;
+  padding: 0 11px;
+  border-radius: 8px;
+  color: @overlay0;
+}
+#custom-vpn.on         { color: @green; }
+#custom-vpn.connecting { color: @yellow; }
+#custom-vpn.blocked    { color: @red; }
+
 #custom-gamemode {
   background: @surface0;
   margin: 4px 0;

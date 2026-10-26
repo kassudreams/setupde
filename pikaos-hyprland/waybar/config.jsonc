@@ -19,6 +19,7 @@
     "custom/nightlight",
     "idle_inhibitor",
     "pulseaudio",
+    "custom/vpn",
     "network",
     "clock",
     "custom/power"
@@ -108,6 +109,14 @@
     "max-volume": 100,
     "on-click": "pavucontrol",
     "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+  },
+
+  "custom/vpn": {
+    "exec": "setupde-vpn watch",
+    "return-type": "json",
+    "restart-interval": 30,
+    "on-click": "setupde-vpn",
+    "on-click-right": "setupde-vpn toggle"
   },
 
   "network": {
