@@ -119,6 +119,13 @@ lets Guix programs use the system fonts. Install Guix apps with `guix install <n
 version. At login a notification says so when that happened: click it and a terminal rebuilds the
 plugin (a few minutes, asks for your password). Or run `setupde-rebuild-plugins` yourself.
 
+**Snapshots before updates:** run `setupde-snapshot setup` once. It installs Timeshift and from then
+on takes a snapshot of the system before apt or PikaOS's updater changes anything (at most one every
+3 hours, the newest 5 are kept). The first one copies the whole system and takes 5-15 minutes; later
+ones only copy what changed. Your files in `/home` aren't in snapshots, and neither are Guix and
+Flatpak apps, so going back to one never touches them. `setupde-snapshot list` shows them,
+`setupde-snapshot now` takes one by hand, `setupde-snapshot remove` turns the automatic ones off.
+
 **Game mode:** `Super+G` turns off blur, shadows, animations and see-through inactive windows,
 turns on VRR (G-Sync / FreeSync) for fullscreen windows, hides notifications and pauses the night
 light. A green gamepad icon shows in the panel; click it or press `Super+G` again to go back.

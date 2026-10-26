@@ -1,0 +1,131 @@
+#!/bin/bash
+# System snapshots with Timeshift, taken by themselves before updates.
+# Your files in /home aren't in them (Timeshift leaves home folders out), so
+# going back to a snapshot only undoes changes to the system: programs,
+# drivers and settings in /etc. Guix (/gnu) and Flatpak apps are left out too,
+# they have their own way back.
+#
+#   setupde-snapshot setup        install Timeshift, take a snapshot before
+#                                 every update from now on, take the first one
+#   setupde-snapshot now [note]   take a snapshot now
+#   setupde-snapshot list         show the snapshots
+#   setupde-snapshot remove       stop taking snapshots before updates
+#
+# Before updates (apt, PikaOS updates) a snapshot is taken at most every
+# 3 hours, and only the newest 5 of those are kept. Snapshots taken with
+# `now` stay until you delete them (Timeshift app, or
+# sudo timeshift --delete --snapshot NAME).
+
+set -u
+
+CONF=/etc/timeshift/timeshift.json
+HOOK=/etc/apt/apt.conf.d/80setupde-snapshot
+STAMP=/var/lib/setupde/last-snapshot
+LOG=/var/log/setupde-snapshot.log
+REPO=/timeshift/snapshots     # where Timeshift keeps them when they're on the system disk
+AUTO_NOTE="setupde: before update"
+KEEP=5
+MIN_GAP=180                   # minutes between automatic snapshots
+
+die() { echo "setupde-snapshot: $*" >&2; exit 1; }
+
+[ "$(id -u)" -eq 0 ] || exec sudo "$0" "$@"
+
+setup() {
+	if ! command -v timeshift >/dev/null; then
+		echo "==> Installing Timeshift"
+		apt-get install -y timeshift || die "couldn't install timeshift"
+	fi
+
+	local uuid
+	uuid="$(findmnt -no UUID /)"
+	[ -n "$uuid" ] || die "couldn't find the system disk"
+
+	echo "==> Setting up Timeshift (snapshots on the system disk, home folders left out)"
+	mkdir -p /etc/timeshift
+	python3 - "$CONF" "$uuid" <<'EOF'
+import json, os, sys
+conf, uuid = sys.argv[1], sys.argv[2]
+cfg = {}
+for path in (conf, "/etc/timeshift/default.json"):
+    try:
+        with open(path) as f:
+            cfg = json.load(f)
+        break
+    except (OSError, ValueError):
+        pass
+if not cfg.get("backup_device_uuid"):
+    cfg["backup_device_uuid"] = uuid
+cfg["do_first_run"] = "false"
+cfg.setdefault("btrfs_mode", "false")
+# no timed snapshots: only before updates and when asked
+for k in ("monthly", "weekly", "daily", "hourly", "boot"):
+    cfg.setdefault("schedule_" + k, "false")
+ex = cfg.setdefault("exclude", [])
+for pattern in ("/gnu/*", "/var/guix/*", "/var/lib/flatpak/*", "/swapfile"):
+    if pattern not in ex:
+        ex.append(pattern)
+cfg.setdefault("exclude-apps", [])
+tmp = conf + ".tmp"
+with open(tmp, "w") as f:
+    json.dump(cfg, f, indent=2)
+os.replace(tmp, conf)
+EOF
+	[ $? -eq 0 ] || die "couldn't write $CONF"
+
+	echo "==> Snapshot before every update ($HOOK)"
+	cat > "$HOOK" <<'EOF'
+// setupde: Timeshift snapshot of the system before apt installs or updates
+// anything (at most one every 3 hours). Turn off with: setupde-snapshot remove
+DPkg::Pre-Invoke { "[ ! -x /usr/local/bin/setupde-snapshot ] || /usr/local/bin/setupde-snapshot auto || true"; };
+EOF
+
+	echo "==> Taking the first snapshot (copies the whole system once: 5-15 minutes)"
+	if timeshift --create --comments "setupde: first snapshot" --scripted; then
+		mkdir -p "$(dirname "$STAMP")" && touch "$STAMP"
+		echo
+		echo "Done. From now on a snapshot is taken before updates by itself."
+	else
+		die "the first snapshot failed (see above)"
+	fi
+}
+
+# Delete automatic snapshots beyond the newest $KEEP
+prune() {
+	[ -d "$REPO" ] || return 0
+	local d names=()
+	for d in "$REPO"/*/; do
+		grep -qs "\"comments\" *: *\"$AUTO_NOTE\"" "$d/info.json" && names+=("$(basename "$d")")
+	done
+	[ "${#names[@]}" -gt "$KEEP" ] || return 0
+	printf '%s\n' "${names[@]}" | sort | head -n "$((${#names[@]} - KEEP))" | while read -r name; do
+		timeshift --delete --snapshot "$name" --scripted >>"$LOG" 2>&1
+	done
+}
+
+# From the apt hook: never stops an update, even if the snapshot fails
+auto() {
+	[ -f "$CONF" ] && command -v timeshift >/dev/null || return 0
+	if [ -n "$(find "$STAMP" -mmin -"$MIN_GAP" 2>/dev/null)" ]; then
+		return 0
+	fi
+	echo "setupde: taking a system snapshot before the update (Timeshift, about a minute)..."
+	if timeshift --create --comments "$AUTO_NOTE" --scripted >>"$LOG" 2>&1; then
+		mkdir -p "$(dirname "$STAMP")" && touch "$STAMP"
+		prune
+	else
+		echo "setupde: the snapshot failed, the update goes on anyway (details in $LOG)"
+	fi
+	return 0
+}
+
+case "${1:-}" in
+	setup)  setup ;;
+	now)    shift; timeshift --create --comments "${*:-setupde: taken by hand}" --scripted ;;
+	list)   timeshift --list --scripted ;;
+	auto)   auto ;;
+	remove) rm -f "$HOOK"
+	        echo "No more snapshots before updates. The ones you have are kept;"
+	        echo "delete them in the Timeshift app if you need the space." ;;
+	*)      sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac
