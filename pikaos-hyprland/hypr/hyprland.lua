@@ -14,5 +14,6 @@ require("input")
 require("look")
 require("bars")
 require("windows")
+require("game")      -- after look: game mode changes some of its settings
 require("keybinds")
 require("autostart")

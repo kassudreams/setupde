@@ -5,6 +5,7 @@
   setupde-nightlight toggle     night light on/off (right-click in waybar)
   setupde-nightlight status     waybar JSON
   setupde-nightlight restore    start hyprsunset with the saved settings (autostart)
+  setupde-nightlight resume     put the saved settings back (after game mode)
 
 Brightness is a software dimmer (gamma), so it works on any screen,
 including TVs that don't support brightness control from the PC.
@@ -177,6 +178,8 @@ def main():
     elif cmd == "restore":
         if shutil.which("hyprsunset"):
             start_hyprsunset(load())
+    elif cmd == "resume":
+        apply(load())
     elif cmd == "popup":
         popup()
     else:

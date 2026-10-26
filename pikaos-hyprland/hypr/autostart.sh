@@ -13,6 +13,8 @@ fi
 if command -v hyprpm >/dev/null; then
 	{ hyprpm reload -n && hyprctl reload; } >/dev/null 2>&1 &
 fi
+# ...and if they didn't load after a Hyprland update, offer to rebuild them
+command -v setupde-plugin-check >/dev/null && setupde-plugin-check >/dev/null 2>&1 &
 
 # Panel (the dock in its middle is generated first) and notifications
 command -v setupde-dock >/dev/null && setupde-dock build

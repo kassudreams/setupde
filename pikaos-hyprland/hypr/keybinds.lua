@@ -43,6 +43,7 @@ hl.bind(mod .. " + T",            hl.dsp.window.float({ action = "toggle" })) --
 hl.bind(mod .. " + SHIFT + T",    require("windows").toggle_workspace_mode)   -- whole workspace
 hl.bind(mod .. " + C",            hl.dsp.window.center())
 hl.bind(mod .. " + P",            hl.dsp.window.pin()) -- keep on top on every workspace
+hl.bind(mod .. " + G",            function() require("game").toggle() end) -- game mode
 
 -- Alt+Tab: next window, raised above the others
 local function cycle(next)

@@ -61,6 +61,9 @@ hl.config({
 		-- PikaOS's session sets XDG_CURRENT_DESKTOP=pika-hyprland on purpose
 		-- (it picks PikaOS's portal settings), so don't warn about it
 		disable_xdg_env_checks   = true,
+		-- VRR (G-Sync / FreeSync): off on the desktop; game mode (Super+G)
+		-- turns it on for fullscreen windows. 2 = always for fullscreen windows
+		vrr = 0,
 	},
 
 	-- X11 apps (Wine/Proton games, Battle.net, Steam) render at native pixels

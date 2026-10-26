@@ -13,6 +13,7 @@
 
   "modules-left": ["custom/launcher", "ext/workspaces"],
   "modules-right": [
+    "custom/gamemode",
     "tray",
     "group/hardware",
     "custom/nightlight",
@@ -73,6 +74,14 @@
     "exec": "setupde-sysinfo power",
     "return-type": "json",
     "interval": 3
+  },
+
+  "custom/gamemode": {
+    "exec": "setupde-gamemode status",
+    "interval": "once",
+    "signal": 10,
+    "tooltip-format": "Game mode is on: no blur or animations, VRR on, notifications hidden\nClick or Super+G to turn it off",
+    "on-click": "setupde-gamemode off"
   },
 
   "custom/nightlight": {

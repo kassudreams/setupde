@@ -1,0 +1,13 @@
+#!/bin/sh
+# Game mode for Hyprland, the same as Super+G (see ~/.config/hypr/game.lua).
+#   setupde-gamemode            on <-> off
+#   setupde-gamemode on|off     e.g. as Lutris' pre-launch / post-exit script
+#   setupde-gamemode status     panel icon (prints nothing when it's off)
+flag="${XDG_RUNTIME_DIR:-/tmp}/setupde-gamemode"
+case "${1:-toggle}" in
+	on)     hyprctl eval 'require("game").set(true)' >/dev/null ;;
+	off)    hyprctl eval 'require("game").set(false)' >/dev/null ;;
+	toggle) hyprctl eval 'require("game").toggle()' >/dev/null ;;
+	status) if [ -e "$flag" ]; then echo "󰊴"; else echo; fi ;;
+	*)      sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

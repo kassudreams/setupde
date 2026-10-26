@@ -1,0 +1,21 @@
+#!/bin/sh
+# Run at login (autostart.sh): if the title-bar plugin didn't load - usually
+# because a PikaOS update brought a new Hyprland - say so, and rebuild it in
+# a terminal when the notification is clicked.
+command -v hyprpm >/dev/null || exit 0
+hyprpm list 2>/dev/null | grep -qi hyprbars || exit 0 # title bars not set up
+sleep 20 # autostart's `hyprpm reload` needs a moment
+hyprctl plugin list 2>/dev/null | grep -qi hyprbars && exit 0
+
+action="$(notify-send -u critical -a "Title bars" -i dialog-warning --action=default=Rebuild \
+	"Title bars are missing" \
+	"Hyprland was probably updated. Click here to rebuild the title-bar plugin (a few minutes, asks for your password).")"
+[ "$action" = default ] || exit 0
+exec foot -T "Rebuilding title bars" sh -c '
+	if setupde-rebuild-plugins; then
+		notify-send -a "Title bars" "Title bars are back"
+		echo; echo "Done. Press Enter to close."
+	else
+		echo; echo "The rebuild failed. Send the text above to get help. Press Enter to close."
+	fi
+	read _'

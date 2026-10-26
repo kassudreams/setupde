@@ -116,7 +116,15 @@ lets Guix programs use the system fonts. Install Guix apps with `guix install <n
 `guix install icecat glibc-locales`, then log out and back in once.
 
 **After PikaOS updates Hyprland** the title bars disappear until the plugin is rebuilt for the new
-version. Run `setupde-rebuild-plugins`.
+version. At login a notification says so when that happened: click it and a terminal rebuilds the
+plugin (a few minutes, asks for your password). Or run `setupde-rebuild-plugins` yourself.
+
+**Game mode:** `Super+G` turns off blur, shadows, animations and see-through inactive windows,
+turns on VRR (G-Sync / FreeSync) for fullscreen windows, hides notifications and pauses the night
+light. A green gamepad icon shows in the panel; click it or press `Super+G` again to go back.
+To have it switch by itself for a game in Lutris: right-click the game → Configure → System options
+→ *Pre-launch script* `setupde-gamemode on`, *Post-exit script* `setupde-gamemode off`.
+If the screen flickers in games with VRR, set `vrr = 0` in `game_look()` in `~/.config/hypr/game.lua`.
 
 Go back to PikaOS's setup with `rm -rf ~/.config/hypr && mv ~/.config/hypr.pikaos-backup-<date> ~/.config/hypr`.
 
