@@ -37,6 +37,10 @@ lock screen configs. Windows **float by default** with soft shadows, blur and sp
 * The **first window on an empty workspace opens big**; later ones open at their normal size, centred,
   and **cascade** instead of piling up on top of each other
 * Each app reopens at the **size you last gave it**
+* Windows stay **below the panel**: one that opens too tall, or asks for the top of the screen, is
+  moved (and if needed shrunk) to fit, and a window dragged near the panel snaps just below it.
+  Only full-screen windows cover the panel. Games (Wine/Proton/Steam) keep the size and place they
+  ask for, and a game window that covers the whole screen is made full screen
 * `Super+T` tiles or floats the focused window
 * `Super+Shift+T` switches the **whole workspace** between floating and tiling. In tiling mode
   dialogs still float, like normal Hyprland. Each workspace (1-10) has its own mode
@@ -361,6 +365,10 @@ or the monitors' own level.
 
 ## Troubleshooting
 
+* **WoW (or another game) shows a stretched corner of the picture, often after Alt+Tab:** in the
+  game's settings use Display Mode *Windowed (Fullscreen)*, not *Fullscreen*. Real fullscreen
+  makes Wine change the screen resolution, and XWayland only fakes that; switching away and back
+  can leave the picture scaled wrong. If it still happens, press Alt+Enter twice in the game.
 * **Locked out after being away / a moving picture on screen:** that's PikaOS's own lock screen
   (otter-lock, started by otter-idle after 5 minutes). Move the mouse or press a key, then type your
   password. If nothing reacts, press `Ctrl+Alt+F3`, log in, run `loginctl unlock-sessions`

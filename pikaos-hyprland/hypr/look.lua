@@ -18,6 +18,7 @@ hl.config({
 		snap = {
 			enabled    = true, -- floating windows snap to edges and each other
 			window_gap = 12,
+			monitor_gap = 30, -- dragged near the panel, a window snaps just below it
 		},
 	},
 

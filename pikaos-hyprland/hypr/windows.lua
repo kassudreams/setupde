@@ -36,15 +36,20 @@ local function bar_height()
 	return (ok and hyprbars) and C.bar_height or 0
 end
 
+-- Size of a monitor in desktop units (pixels divided by the scale)
+local function monitor_size(m)
+	local pw, ph = m.width, m.height
+	if m.transform % 2 == 1 then pw, ph = ph, pw end -- rotated 90/270
+	return math.floor(pw / m.scale + 0.5), math.floor(ph / m.scale + 0.5)
+end
+
 -- Where a big window goes: the monitor minus the panel and the outer gap,
--- minus the border and title bar drawn around the window
+-- minus the border and title bar drawn around the window. Every floating
+-- window is kept inside this box, so nothing hides behind the panel.
 local function big_box(w)
 	local m = w.monitor
 	if not m then return nil end
-	local pw, ph = m.width, m.height
-	if m.transform % 2 == 1 then pw, ph = ph, pw end -- rotated 90/270
-	local mw = math.floor(pw / m.scale + 0.5)
-	local mh = math.floor(ph / m.scale + 0.5)
+	local mw, mh = monitor_size(m)
 	local r, edge, bar = m.reserved, C.gaps_out + C.border, bar_height()
 	return {
 		x = math.floor(m.x + r.left + edge),
@@ -77,13 +82,45 @@ local function make_big(w, box)
 	place(w, box.x, box.y, box.w, box.h)
 end
 
+-- Move (and if needed shrink) a window so all of it, title bar included,
+-- is inside the box: below the panel and on the screen
+local function fit(box, x, y, width, height)
+	width, height = math.min(width, box.w), math.min(height, box.h)
+	x = math.max(box.x, math.min(x, box.x + box.w - width))
+	y = math.max(box.y, math.min(y, box.y + box.h - height))
+	return x, y, width, height
+end
+
+local function keep_inside(w, box, x, y)
+	local nx, ny, nw, nh = fit(box, x or w.at.x, y or w.at.y, w.size.x, w.size.y)
+	if nx ~= w.at.x or ny ~= w.at.y or nw ~= w.size.x or nh ~= w.size.y then
+		place(w, nx, ny, nw, nh)
+	end
+end
+
 local function make_small(w, box)
 	local s = small[w.address]
 	if not s then -- never been small (it opened big): 60% x 70%, centred
 		local width, height = box.w * 0.6, box.h * 0.7
 		s = { x = box.x + (box.w - width) / 2, y = box.y + (box.h - height) / 2, w = width, h = height }
 	end
-	place(w, s.x, s.y, s.w, s.h)
+	place(w, fit(box, s.x, s.y, s.w, s.h))
+end
+
+-- Games (Wine / Proton / Steam) size and place their own window: resizing
+-- one makes it show a stretched corner of the picture
+local function is_game(w)
+	local c = (w.class or ""):lower()
+	return c:match("%.exe$") ~= nil or c:match("^steam_app_") ~= nil or c == "gamescope"
+end
+
+-- A window that covers the whole monitor (a game's "windowed fullscreen"):
+-- it should be real full screen, above the panel
+local function covers_monitor(w)
+	local m = w.monitor
+	if not m then return false end
+	local mw, mh = monitor_size(m)
+	return w.size.x >= mw - 2 and w.size.y >= mh - 2 and near(w.at.x, m.x) and near(w.at.y, m.y)
 end
 
 -- Double-click a title bar, its green button or Super+M
@@ -116,7 +153,12 @@ local KEEP_PLACE = { ["setupde-nightlight"] = true }
 
 hl.on("window.open", function(w)
 	if not w or not w.floating or not w.workspace then return end
-	if w.fullscreen ~= 0 or KEEP_PLACE[w.class or ""] then return end -- e.g. games
+	if w.fullscreen ~= 0 or KEEP_PLACE[w.class or ""] then return end
+	if covers_monitor(w) then
+		hl.dispatch(hl.dsp.window.fullscreen({ mode = "fullscreen", action = "set", window = w }))
+		return
+	end
+	if is_game(w) then return end
 	local others, any_other = {}, false
 	for _, o in ipairs(hl.get_workspace_windows(w.workspace)) do
 		if o.address ~= w.address then
@@ -129,7 +171,8 @@ hl.on("window.open", function(w)
 	-- below the panel. Double-click its title bar (or Super+M) to make it small.
 	-- An app that was big when it was closed reopens big.
 	local box = big_box(w)
-	if box and ((not any_other and M.float_rules[w.workspace.id]) or nearly_big(w, box)) then
+	if not box then return end
+	if (not any_other and M.float_rules[w.workspace.id]) or nearly_big(w, box) then
 		make_big(w, box)
 		return
 	end
@@ -146,9 +189,9 @@ hl.on("window.open", function(w)
 		if not taken then break end
 		shift = shift + STEP
 	end
-	if shift > 0 then
-		hl.dispatch(hl.dsp.window.move({ x = shift, y = shift, relative = true, window = w }))
-	end
+	-- an app that opens too tall, or asks for the top of the screen, would
+	-- end up partly behind the panel: keep it below
+	keep_inside(w, box, x + shift, y + shift)
 end)
 
 -- Super+Shift+T: switch the active workspace between floating and tiling
