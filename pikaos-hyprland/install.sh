@@ -175,26 +175,9 @@ if [ "$WANT_PACKAGES" -eq 1 ]; then
 
 	if [ -z "$PLUGIN_PATH" ]; then
 		echo "    no packaged plugin, building it with hyprpm (takes a few minutes)"
-		sudo apt-get install -y cmake meson ninja-build cpio pkg-config git g++ gcc make || true
-		# Everything Hyprland 0.56's CMake checks for (hyprpm configures the
-		# Hyprland source to get its headers). Missing ones are skipped.
-		HYPR_BUILD_DEPS=(
-			glslang-dev glslang-tools hyprwayland-scanner
-			libaquamarine-dev libhyprlang-dev libhyprcursor-dev libhyprutils-dev libhyprgraphics-dev
-			libxkbcommon-dev uuid-dev libwayland-dev wayland-protocols
-			libcairo2-dev libpango1.0-dev libpixman-1-dev libxcursor-dev libdrm-dev
-			libinput-dev libeis-dev libgbm-dev libglib2.0-dev libre2-dev libmuparser-dev
-			liblcms2-dev liblua5.5-dev libgles-dev libegl-dev libopengl-dev libudis86-dev
-			libxcb1-dev libxcb-render0-dev libxcb-xfixes0-dev libxcb-icccm4-dev
-			libxcb-composite0-dev libxcb-res0-dev libxcb-errors-dev
-			libhyprwire-dev hyprwire-dev libreadline-dev libtomlplusplus-dev libglaze-dev
-		)
-		deps=()
-		for p in "${HYPR_BUILD_DEPS[@]}"; do
-			apt-cache show "$p" >/dev/null 2>&1 && deps+=("$p") || warn "build dependency $p not found"
-		done
-		sudo apt-get install -y "${deps[@]}" || true
-		sudo apt-get build-dep -y hyprland >/dev/null 2>&1 || true
+		# Everything Hyprland's build checks for (hyprpm configures the Hyprland
+		# source to get its headers); the list lives in setupde-rebuild-plugins
+		bash "$REPO_DIR/bin/setupde-rebuild-plugins" --deps || true
 		# hyprbars includes <lua.h>; Debian keeps it in /usr/include/lua5.5
 		CXXFLAGS="-O2 $(pkg-config --cflags lua5.5 2>/dev/null || echo -I/usr/include/lua5.5)"
 		export CXXFLAGS

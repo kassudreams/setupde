@@ -132,7 +132,8 @@ lets Guix programs use the system fonts. Install Guix apps with `guix install <n
 
 **After PikaOS updates Hyprland** the title bars disappear until the plugin is rebuilt for the new
 version. At login a notification says so when that happened: click it and a terminal rebuilds the
-plugin (a few minutes, asks for your password). Or run `setupde-rebuild-plugins` yourself.
+plugin (a few minutes, asks for your password). Or run `setupde-rebuild-plugins` yourself. It
+first installs whatever the new Hyprland needs to build plugins (0.57 added libcanberra and sdbus-c++).
 
 **Snapshots before updates:** run `setupde-snapshot setup` once. It installs Timeshift and from then
 on takes a snapshot of the system before apt or PikaOS's updater changes anything (at most one every
