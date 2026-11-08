@@ -370,6 +370,11 @@ or the monitors' own level.
   game's settings use Display Mode *Windowed (Fullscreen)*, not *Fullscreen*. Real fullscreen
   makes Wine change the screen resolution, and XWayland only fakes that; switching away and back
   can leave the picture scaled wrong. If it still happens, press Alt+Enter twice in the game.
+* **"Lockscreen crashed" picture (Hyprland's own, it mentions hyprlock):** the lock screen app died
+  while the screen was locked. Press `Ctrl+Alt+F3`, log in and start a new lock screen with
+  `hyprctl --instance 0 dispatch 'hl.dsp.exec_cmd("swaylock -f")'`, go back with `Ctrl+Alt+F7` and
+  type your password. Or unlock right away with
+  `hyprctl --instance 0 eval 'hl.clear_crashed_lockscreen()'`.
 * **Locked out after being away / a moving picture on screen:** that's PikaOS's own lock screen
   (otter-lock, started by otter-idle after 5 minutes). Move the mouse or press a key, then type your
   password. If nothing reacts, press `Ctrl+Alt+F3`, log in, run `loginctl unlock-sessions`

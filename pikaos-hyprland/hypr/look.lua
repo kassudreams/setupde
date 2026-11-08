@@ -65,6 +65,9 @@ hl.config({
 		-- VRR (G-Sync / FreeSync): off on the desktop; game mode (Super+G)
 		-- turns it on for fullscreen windows. 2 = always for fullscreen windows
 		vrr = 0,
+		-- if the lock screen crashes, a new one may take over instead of the
+		-- screen staying stuck on Hyprland's "lockscreen died" picture
+		allow_session_lock_restore = true,
 	},
 
 	-- X11 apps (Wine/Proton games, Battle.net, Steam) render at native pixels

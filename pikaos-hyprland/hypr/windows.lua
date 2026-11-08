@@ -194,6 +194,27 @@ hl.on("window.open", function(w)
 	keep_inside(w, box, x + shift, y + shift)
 end)
 
+-- The title-bar plugin loads a few seconds after login (autostart.sh) and the
+-- config is reloaded then. Windows that opened before that were sized with
+-- no room for a title bar, so their bars ended up behind the panel: fit them
+-- again (big ones stay big). Runs after every reload; windows that already
+-- fit aren't touched.
+hl.on("config.reloaded", function()
+	for _, w in ipairs(hl.get_windows()) do
+		if w.floating and w.fullscreen == 0 and w.workspace and not w.workspace.special
+			and not is_game(w) and not KEEP_PLACE[w.class or ""] then
+			local box = big_box(w)
+			if box then
+				if nearly_big(w, box) then
+					make_big(w, box)
+				else
+					keep_inside(w, box)
+				end
+			end
+		end
+	end
+end)
+
 -- Super+Shift+T: switch the active workspace between floating and tiling
 function M.toggle_workspace_mode()
 	local ws = hl.get_active_workspace()
