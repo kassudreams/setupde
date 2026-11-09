@@ -114,8 +114,8 @@ local function is_game(w)
 	return c:match("%.exe$") ~= nil or c:match("^steam_app_") ~= nil or c == "gamescope"
 end
 
--- A window that covers the whole monitor (a game's "windowed fullscreen"):
--- it should be real full screen, above the panel
+-- A window that covers the whole monitor. For a game that's its "windowed
+-- fullscreen"; any other app (Brave, a terminal, ...) just opens big.
 local function covers_monitor(w)
 	local m = w.monitor
 	if not m then return false end
@@ -154,11 +154,13 @@ local KEEP_PLACE = { ["setupde-nightlight"] = true }
 hl.on("window.open", function(w)
 	if not w or not w.floating or not w.workspace then return end
 	if w.fullscreen ~= 0 or KEEP_PLACE[w.class or ""] then return end
-	if covers_monitor(w) then
-		hl.dispatch(hl.dsp.window.fullscreen({ mode = "fullscreen", action = "set", window = w }))
+	if is_game(w) then
+		-- a game's "windowed fullscreen": make it real full screen, above the panel
+		if covers_monitor(w) then
+			hl.dispatch(hl.dsp.window.fullscreen({ mode = "fullscreen", action = "set", window = w }))
+		end
 		return
 	end
-	if is_game(w) then return end
 	local others, any_other = {}, false
 	for _, o in ipairs(hl.get_workspace_windows(w.workspace)) do
 		if o.address ~= w.address then
@@ -248,6 +250,16 @@ hl.window_rule({
 	move  = "monitor_w-window_w-16 56",
 	pin   = true,
 	persistent_size = false,
+})
+
+-- HDR only for games. Hyprland tells every full screen app that HDR is
+-- preferred (render.cm_auto_hdr), so a browser playing YouTube full screen
+-- switched the monitor into HDR / game mode and flickered. Only games
+-- (Wine/Proton .exe, Steam games, gamescope) may switch it now.
+hl.window_rule({
+	name  = "auto-hdr-games-only",
+	match = { class = "negative:(?i)(.*\\.exe|steam_app_.*|gamescope)" },
+	no_auto_hdr = true,
 })
 
 -- Ignore apps asking to maximise themselves

@@ -117,7 +117,8 @@ borders, blur, animations), `windows.lua` (floating rules, cascading, workspace 
   use *Scan for Wi-Fi again* in the menu
 
 **HDR:** the monitor runs at 10-bit, and `setupde-hdr auto` (the default) switches the screen to HDR
-whenever a fullscreen game or video outputs HDR. `setupde-hdr on` keeps HDR on all the time,
+whenever a fullscreen game outputs HDR (only games: browsers and video players stay
+SDR, so YouTube full screen doesn't flip the monitor into HDR mode). `setupde-hdr on` keeps HDR on all the time,
 `setupde-hdr off` disables it. On an LG TV, turn on *HDMI Ultra HD Deep Colour* for that input.
 Apps need to send HDR themselves:
 
