@@ -1,7 +1,8 @@
 -- Title bars on every window (hyprbars plugin, installed by install.sh).
---   drag the bar         move the window
---   double-click it      big (fills the screen below the panel) <-> small
---   buttons              close / big-small / hide (Super+S brings hidden back)
+--   drag the bar         move the window (to a screen edge: it snaps there)
+--   double-click it      big (fills the screen below the panel) <-> own size
+--   buttons              close / big-own size / minimize / snap menu
+--                        (a minimized window comes back from the dock)
 -- Does nothing until the plugin is loaded (autostart.sh loads it).
 
 local ok, hyprbars = pcall(function() return hl.plugin.hyprbars end)
@@ -10,7 +11,7 @@ if not ok or not hyprbars then return end
 local C = require("theme")
 local rgba = C.rgba
 
-local TOGGLE_BIG = [[hyprctl eval 'require("windows").toggle_big()']]
+local TOGGLE_BIG = [[hyprctl eval 'require("snap").toggle_big()']]
 
 hl.config({
 	plugin = {
@@ -34,7 +35,7 @@ hl.config({
 	},
 })
 
--- Buttons, right to left: close, big/small, hide
+-- Buttons, right to left: close, big/own size, minimize, snap menu
 hyprbars.add_button({
 	bg_color = rgba(C.red), fg_color = rgba(C.base), size = 14, icon = "",
 	action = [[hyprctl dispatch 'hl.dsp.window.close()']],
@@ -45,5 +46,9 @@ hyprbars.add_button({
 })
 hyprbars.add_button({
 	bg_color = rgba(C.yellow), fg_color = rgba(C.base), size = 14, icon = "",
-	action = [[hyprctl dispatch 'hl.dsp.window.move({ workspace = "special:scratch", follow = false })']],
+	action = [[hyprctl eval 'require("windows").minimize()']],
+})
+hyprbars.add_button({
+	bg_color = rgba(C.blue), fg_color = rgba(C.base), size = 14, icon = "",
+	action = "setupde-snap",
 })

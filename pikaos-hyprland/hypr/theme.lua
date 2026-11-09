@@ -16,6 +16,7 @@ local M = {
 
 -- Sizes (look.lua, bars.lua, and windows.lua uses them to size big windows)
 M.gaps_out   = 14 -- space around windows at the screen edges
+M.gaps_in    = 6  -- half the space between two snapped windows
 M.border     = 2
 M.bar_height = 28 -- title bars
 

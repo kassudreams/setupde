@@ -1,12 +1,18 @@
 #!/bin/sh
 # Power menu using fuzzel. Bound to Super+Esc and the waybar ⏻ button.
+err="$(mktemp)"
 choice=$(printf '%s\n' \
 	"  Lock" \
 	"󰍃  Log out" \
 	"󰤄  Suspend" \
 	"  Reboot" \
 	"⏻  Shut down" |
-	fuzzel --dmenu --prompt "Power: " --lines 5 --width 22)
+	fuzzel --dmenu --prompt "Power: " --lines 5 --width 22 2>"$err")
+# the menu itself didn't open (Esc only closes it, without an error)
+if [ -z "$choice" ] && grep -qi -E "err|fail|already running" "$err"; then
+	notify-send -u critical -i system-shutdown "Power menu didn't open" "$(tail -n 3 "$err")" 2>/dev/null
+fi
+rm -f "$err"
 
 # Run a power action; if it's refused (another user still logged in, an app
 # blocking it, no password prompt available, ...), say why instead of

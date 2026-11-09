@@ -6,7 +6,7 @@ local rgba = C.rgba
 
 hl.config({
 	general = {
-		gaps_in  = 6,
+		gaps_in  = C.gaps_in,
 		gaps_out = C.gaps_out,
 		border_size = C.border,
 		col = {
@@ -14,7 +14,6 @@ hl.config({
 			inactive_border = rgba(C.surface0, "cc"),
 		},
 		resize_on_border = true,
-		layout = "dwindle", -- used for windows you tile with Super+T
 		snap = {
 			enabled    = true, -- floating windows snap to edges and each other
 			window_gap = 12,
@@ -47,10 +46,6 @@ hl.config({
 
 	animations = {
 		enabled = true,
-	},
-
-	dwindle = {
-		preserve_split = true,
 	},
 
 	misc = {

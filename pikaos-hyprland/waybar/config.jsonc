@@ -27,8 +27,9 @@
 
   "custom/launcher": {
     "format": "󰀻",
-    "tooltip-format": "Applications (Super+Space)",
-    "on-click": "fuzzel"
+    "tooltip-format": "Click: apps (Super+Space)\nRight-click: keyboard shortcuts (Super+F1)",
+    "on-click": "fuzzel",
+    "on-click-right": "setupde-keys"
   },
 
   "ext/workspaces": {
@@ -45,7 +46,7 @@
   "cpu": {
     "interval": 2,
     "format": " {usage}%",
-    "tooltip-format": "CPU load: {usage}%\nClock: {avg_frequency} GHz",
+    "tooltip-format": "CPU load: {usage}%\nClock: {avg_frequency} GHz\nClick: btop (all programs)",
     "on-click": "foot -e btop"
   },
 
@@ -97,8 +98,8 @@
   "idle_inhibitor": {
     "format": "{icon}",
     "format-icons": { "activated": "", "deactivated": "" },
-    "tooltip-format-activated": "Screen will stay awake",
-    "tooltip-format-deactivated": "Screen will lock when idle"
+    "tooltip-format-activated": "Screen stays awake\nClick: lock when idle again",
+    "tooltip-format-deactivated": "Screen locks after 5 minutes idle\nClick: keep it awake"
   },
 
   "pulseaudio": {
@@ -129,9 +130,9 @@
     "format-disconnected": "󰤮",
     "format-disabled": "󰤭",
     "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
-    "tooltip-format-wifi": "{essid}  ({signalStrength}%, {frequency} GHz)\n{ipaddr}\n\u2191 {bandwidthUpBytes}  \u2193 {bandwidthDownBytes}",
-    "tooltip-format-ethernet": "Wired ({ifname})\n{ipaddr}\n\u2191 {bandwidthUpBytes}  \u2193 {bandwidthDownBytes}",
-    "tooltip-format-disconnected": "Not connected",
+    "tooltip-format-wifi": "{essid}  ({signalStrength}%, {frequency} GHz)\n{ipaddr}\n\u2191 {bandwidthUpBytes}  \u2193 {bandwidthDownBytes}\n\nClick: networks   Right-click: network settings",
+    "tooltip-format-ethernet": "Wired ({ifname})\n{ipaddr}\n\u2191 {bandwidthUpBytes}  \u2193 {bandwidthDownBytes}\n\nClick: networks   Right-click: network settings",
+    "tooltip-format-disconnected": "Not connected\n\nClick: networks   Right-click: network settings",
     "on-click": "setupde-network",
     "on-click-right": "nm-connection-editor"
   },
@@ -158,7 +159,7 @@
 
   "custom/power": {
     "format": "⏻",
-    "tooltip-format": "Power menu (Super+Esc)",
+    "tooltip-format": "Click: lock, log out, suspend, restart, shut down (Super+Esc)",
     "on-click": "setupde-powermenu"
   }
 }

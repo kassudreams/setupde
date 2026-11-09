@@ -38,10 +38,15 @@ hl.bind("CTRL + Print",           exec("setupde-screenshot edit"))
 hl.bind(mod .. " + Q",            hl.dsp.window.close())
 hl.bind("ALT + F4",               hl.dsp.window.close())
 hl.bind(mod .. " + F",            hl.dsp.window.fullscreen())
-hl.bind(mod .. " + M",            function() require("windows").toggle_big() end) -- big / small
-hl.bind(mod .. " + T",            hl.dsp.window.float({ action = "toggle" })) -- tile / float this window
-hl.bind(mod .. " + SHIFT + T",    require("windows").toggle_workspace_mode)   -- whole workspace
-hl.bind(mod .. " + C",            hl.dsp.window.center())
+hl.bind(mod .. " + M",            function() require("snap").toggle_big() end) -- big / own size
+hl.bind(mod .. " + T",            function() require("snap").arrange() end)    -- tile all / undo
+hl.bind(mod .. " + H",            function() require("windows").minimize() end)
+hl.bind(mod .. " + C",            function() -- back to its own size, centred
+	local w = hl.get_active_window()
+	if w and require("snap").zone(w) then require("snap").free(w) end
+	hl.dispatch(hl.dsp.window.center())
+end)
+hl.bind(mod .. " + F1",           exec("setupde-keys"))                       -- list of shortcuts
 hl.bind(mod .. " + P",            hl.dsp.window.pin()) -- keep on top on every workspace
 hl.bind(mod .. " + G",            function() require("game").toggle() end) -- game mode
 
@@ -56,10 +61,10 @@ hl.bind("ALT + Tab",              cycle(true))
 hl.bind("ALT + SHIFT + Tab",      cycle(false))
 hl.bind(mod .. " + Tab",          cycle(true))
 
--- Focus / move with the arrow keys
+-- Snap with the arrow keys (like Windows), focus by direction with Alt
 for _, dir in ipairs({ "left", "right", "up", "down" }) do
-	hl.bind(mod .. " + " .. dir,          hl.dsp.focus({ direction = dir }))
-	hl.bind(mod .. " + SHIFT + " .. dir,  hl.dsp.window.move({ direction = dir }))
+	hl.bind(mod .. " + " .. dir,          function() require("snap").key(dir) end)
+	hl.bind(mod .. " + ALT + " .. dir,    hl.dsp.focus({ direction = dir }))
 end
 
 -- Workspaces
@@ -71,10 +76,6 @@ hl.bind(mod .. " + CTRL + left",  hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mod .. " + CTRL + right", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mod .. " + mouse_down",   hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mod .. " + mouse_up",     hl.dsp.focus({ workspace = "e-1" }))
-
--- Scratchpad: a hidden workspace you can pop up over everything
-hl.bind(mod .. " + S",            hl.dsp.workspace.toggle_special("scratch"))
-hl.bind(mod .. " + SHIFT + S",    hl.dsp.window.move({ workspace = "special:scratch" }))
 
 -- Mouse: Super+left drag moves, Super+right drag resizes
 hl.bind(mod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })

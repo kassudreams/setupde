@@ -1,0 +1,28 @@
+#!/bin/sh
+# Snap menu (the blue title bar button): put the window in a zone of the
+# screen, or arrange all windows on the workspace. See snap.lua.
+choice="$(printf '%s\n' \
+	"◧  Left half" \
+	"◨  Right half" \
+	"■  Big" \
+	"□  Own size" \
+	"◰  Top left" \
+	"◳  Top right" \
+	"◱  Bottom left" \
+	"◲  Bottom right" \
+	"▦  Arrange all windows (again: undo)" |
+	fuzzel --dmenu --prompt "Snap: " --lines 9 --width 36)"
+
+case "$choice" in
+	*"Left half")     z='snap("left")' ;;
+	*"Right half")    z='snap("right")' ;;
+	*"  Big")         z='snap("big")' ;;
+	*"Own size")      z='free()' ;;
+	*"Top left")      z='snap("tl")' ;;
+	*"Top right")     z='snap("tr")' ;;
+	*"Bottom left")   z='snap("bl")' ;;
+	*"Bottom right")  z='snap("br")' ;;
+	*Arrange*)        z='arrange()' ;;
+	*) exit 0 ;;
+esac
+hyprctl eval "require(\"snap\").$z" >/dev/null

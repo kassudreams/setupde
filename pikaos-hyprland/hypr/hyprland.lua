@@ -1,5 +1,5 @@
 -- setupde: Hyprland config for PikaOS (Hyprland 0.55+, Lua config)
--- Catppuccin Mocha look, windows float by default (Super+T tiles one).
+-- Catppuccin Mocha look; every window floats and snaps (Super+arrows, Super+T).
 --
 -- Hyprland reloads this automatically when you save a file.
 -- autostart.sh only runs when Hyprland starts (log out and in for that).
@@ -13,6 +13,7 @@ require("env")
 require("input")
 require("look")
 require("bars")
+require("snap")       -- snapping, Arrange, big / own size
 require("windows")
 require("game")      -- after look: game mode changes some of its settings
 require("keybinds")

@@ -29,23 +29,28 @@ uses one dark colour theme (Catppuccin Mocha).
 
 The same look for **PikaOS's Hyprland edition** (Hyprland 0.55 or newer, which uses a Lua config)
 is in [`pikaos-hyprland/`](pikaos-hyprland). It uses the same waybar, fuzzel, foot, mako and
-lock screen configs. Windows **float by default** with soft shadows, blur and springy animations:
+lock screen configs, with soft shadows, blur and springy animations.
 
-* **Title bars** on every window (the `hyprbars` plugin): drag to move, **double-click to switch between
-  big** (fills the screen below the panel) **and small** (also `Super+M`), plus close / big-small / hide
-  buttons. A big window is a normal window, so clicking any other window brings that one to the front
-* The **first window on an empty workspace opens big**; later ones open at their normal size, centred,
-  and **cascade** instead of piling up on top of each other
-* Each app reopens at the **size you last gave it**
-* Windows stay **below the panel**: one that opens too tall, or asks for the top of the screen, is
-  moved (and if needed shrunk) to fit, and a window dragged near the panel snaps just below it.
-  Only full-screen windows cover the panel. Games (Wine/Proton/Steam) keep the size and place they
-  ask for, and a game window that covers the whole screen is made full screen
-* `Super+T` tiles or floats the focused window
-* `Super+Shift+T` switches the **whole workspace** between floating and tiling. In tiling mode
-  dialogs still float, like normal Hyprland. Each workspace (1-10) has its own mode
-* Hyprland always keeps floating windows above tiled ones, so a tiled window can't be clicked to the
-  front of a floating one. Stick to one mode per workspace: floating with big/small, or tiling
+**How windows work:** every window floats, and "tiles" are windows snapped to a part of the screen
+(like Windows). So clicking any window always brings it to the front, and nothing gets stuck behind
+anything.
+
+| Do this | What happens |
+|---|---|
+| Open an app | The first window on an empty workspace opens **big** (fills the screen below the panel). Later ones open at their own size, centred, and cascade. Every window fits below the panel. Games keep the size they ask for |
+| `Super+←` / `Super+→` | Snap to the left / right half. Press again: 1/3, then 2/3 |
+| `Super+↑` | Big. A half goes to its top quarter |
+| `Super+↓` | Back to its own size. A half goes to its bottom quarter. A window at its own size is minimized |
+| Drag to a screen edge and hold still a moment | Left/right edge: half. Top edge: big. Corner: quarter. Drag a snapped window away and it gets its own size back |
+| `Super+T` | **Arrange**: tile every window on the workspace (2 = halves, 3 = half + quarters, 4 = quarters, more = grid). Press again to put them back |
+| Double-click the title bar / `Super+M` | Big ↔ own size |
+| Title bar buttons | Close, big/own size, minimize, snap menu (halves, quarters, Arrange) |
+| Minimize (button, `Super+H`) | The window hides. Click it in the dock to bring it back |
+| `Super+F1` | List of all shortcuts (also: right-click the launcher icon) |
+
+Dragging snaps once the window rests at the edge for about 0.3 s: Hyprland can't tell a script when
+the mouse button is let go. Dialogs open over their app and are left out of Arrange. Windows dragged
+close to each other or to the panel snap together magnetically.
 
 ```sh
 git clone https://github.com/kassudreams/setupde.git
@@ -73,8 +78,8 @@ Then log out and back in. What it does:
   FAT support. Both are in the app launcher and ask for your password before changing a drive
 
 Config files in `~/.config/hypr`: `monitors.lua`, `input.lua` (keyboard), `look.lua` (gaps,
-borders, blur, animations), `windows.lua` (floating rules, cascading, workspace modes, blur on panels), `keybinds.lua`,
-`autostart.sh` (panel, tray, idle). Hyprland reloads the Lua files as soon as you save them.
+borders, blur, animations), `snap.lua` (snapping, Arrange, big / own size), `windows.lua` (opening rules, minimize, blur on
+panels), `game.lua` (game mode), `keybinds.lua`, `autostart.sh` (panel, tray, idle). Hyprland reloads the Lua files as soon as you save them.
 
 **The panel** (PikaOS layout):
 
