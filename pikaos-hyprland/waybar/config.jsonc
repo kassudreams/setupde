@@ -81,7 +81,7 @@
     "exec": "setupde-gamemode status",
     "interval": "once",
     "signal": 10,
-    "tooltip-format": "Game mode is on: no blur or animations, VRR on, notifications hidden\nClick or Super+G to turn it off",
+    "tooltip-format": "Game mode is on: HDR and VRR on, no blur or animations, notifications hidden\nClick or Super+G to turn it off",
     "on-click": "setupde-gamemode off"
   },
 

@@ -77,10 +77,11 @@ hl.config({
 		force_zero_scaling = true,
 	},
 
-	-- HDR: switch the screen to HDR when a fullscreen game/video outputs HDR
-	-- (1 = on, 0 = off; `setupde-hdr` changes this)
+	-- HDR never switches by itself when an app goes full screen (that looked
+	-- washed out, HDR on top of HDR): game mode (Super+G) turns it on and off
+	-- for the whole screen, see monitors.lua
 	render = {
-		cm_auto_hdr = 1,
+		cm_auto_hdr = 0,
 	},
 })
 

@@ -3,6 +3,7 @@
 --   - no blur, shadows or animations, and inactive windows aren't
 --     see-through, so the game gets the GPU time
 --   - VRR (G-Sync / FreeSync) for fullscreen windows, if the monitor has it
+--   - HDR on for the whole screen (monitors.lua; `setupde-hdr` changes it)
 --   - notifications are hidden and the night light is paused
 -- A gamepad icon shows in the panel; click it or press Super+G to go back.
 
@@ -17,6 +18,20 @@ function M.is_on()
 	return f ~= nil
 end
 
+-- HDR for the whole screen while game mode is on (unless setupde-hdr says
+-- never); leaving puts back what monitors.lua has
+local function set_hdr(on)
+	local ok, mon = pcall(require, "monitors")
+	if not ok or type(mon) ~= "table" or not mon.rule then return end
+	if on then
+		if mon.hdr_in_game_mode and mon.rule.cm == "srgb" then
+			hl.monitor({ output = mon.rule.output, cm = "hdr" })
+		end
+	else
+		hl.monitor({ output = mon.rule.output, cm = mon.rule.cm })
+	end
+end
+
 local function game_look()
 	hl.config({
 		animations = { enabled = false },
@@ -27,6 +42,7 @@ local function game_look()
 		},
 		misc = { vrr = 2 }, -- 2 = VRR for fullscreen windows
 	})
+	set_hdr(true)
 end
 
 function M.set(on)
@@ -40,6 +56,7 @@ function M.set(on)
 		os.remove(FLAG)
 		package.loaded["look"] = nil
 		require("look") -- back to the normal look, as look.lua has it
+		set_hdr(false)
 		hl.exec_cmd("makoctl mode -r do-not-disturb; setupde-nightlight resume")
 	end
 	hl.exec_cmd("pkill -RTMIN+" .. WAYBAR_SIGNAL .. " -x waybar")

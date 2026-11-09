@@ -252,16 +252,6 @@ hl.window_rule({
 	persistent_size = false,
 })
 
--- HDR only for games. Hyprland tells every full screen app that HDR is
--- preferred (render.cm_auto_hdr), so a browser playing YouTube full screen
--- switched the monitor into HDR / game mode and flickered. Only games
--- (Wine/Proton .exe, Steam games, gamescope) may switch it now.
-hl.window_rule({
-	name  = "auto-hdr-games-only",
-	match = { class = "negative:(?i)(.*\\.exe|steam_app_.*|gamescope)" },
-	no_auto_hdr = true,
-})
-
 -- Ignore apps asking to maximise themselves
 hl.window_rule({
 	name  = "suppress-maximize-events",

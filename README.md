@@ -116,11 +116,12 @@ borders, blur, animations), `windows.lua` (floating rules, cascading, workspace 
   the pairing). An iPhone's Wi-Fi hotspot only shows up while its Personal Hotspot screen is open;
   use *Scan for Wi-Fi again* in the menu
 
-**HDR:** the monitor runs at 10-bit, and `setupde-hdr auto` (the default) switches the screen to HDR
-whenever a fullscreen game outputs HDR (only games: browsers and video players stay
-SDR, so YouTube full screen doesn't flip the monitor into HDR mode). `setupde-hdr on` keeps HDR on all the time,
-`setupde-hdr off` disables it. On an LG TV, turn on *HDMI Ultra HD Deep Colour* for that input.
-Apps need to send HDR themselves:
+**HDR:** the monitor runs at 10-bit. HDR is on or off for the whole screen and apps never switch it
+by themselves: **game mode (`Super+G`) turns HDR on, leaving game mode turns it off**. `setupde-hdr on`
+keeps HDR on all the time, `setupde-hdr off` keeps it off (also in game mode), `setupde-hdr game`
+goes back to the default. If HDR looks washed out, raise `sdrsaturation` (e.g. 1.15) and
+`sdrbrightness` in `~/.config/hypr/monitors.lua`. On an LG TV, turn on *HDMI Ultra HD Deep Colour* for that input.
+While HDR is on, normal (SDR) pictures are mapped into it. For real HDR the game has to send it:
 
 * **Proton games:** launch options `PROTON_ENABLE_WAYLAND=1 PROTON_ENABLE_HDR=1 %command%`, then
   turn HDR on in the game. The other way is gamescope: `gamescope --hdr-enabled -W 3840 -H 2160 -r 120 -f -- %command%`
@@ -150,8 +151,8 @@ rEFInd finds them by itself. If the PC doesn't even get that far, pick an older 
 boot menu first (PikaOS keeps a few).
 
 **Game mode:** `Super+G` turns off blur, shadows, animations and see-through inactive windows,
-turns on VRR (G-Sync / FreeSync) for fullscreen windows, hides notifications and pauses the night
-light. A green gamepad icon shows in the panel; click it or press `Super+G` again to go back.
+turns on VRR (G-Sync / FreeSync) for fullscreen windows and HDR for the whole screen, hides
+notifications and pauses the night light. A green gamepad icon shows in the panel; click it or press `Super+G` again to go back.
 To have it switch by itself for a game in Lutris: right-click the game → Configure → System options
 → *Pre-launch script* `setupde-gamemode on`, *Post-exit script* `setupde-gamemode off`.
 If the screen flickers in games with VRR, set `vrr = 0` in `game_look()` in `~/.config/hypr/game.lua`.

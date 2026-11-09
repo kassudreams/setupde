@@ -9,22 +9,32 @@
 --   2.5      -> 1536x864 desktop (a bit more room)
 
 --
--- HDR (switch with `setupde-hdr auto|on|off`, which edits the cm line):
---   cm = "srgb"     normal desktop; games/videos that output HDR switch the
---                   screen to HDR by themselves while fullscreen (auto mode)
+-- HDR is on or off for the whole screen, never switched by apps:
+--   game mode (Super+G) turns HDR on, leaving it turns it off again.
+-- `setupde-hdr game|on|off` changes the two lines marked below:
+--   cm = "srgb"     normal desktop (SDR)
 --   cm = "hdr"      HDR all the time (SDR apps are mapped into HDR)
 --   cm = "hdredid"  like "hdr", but uses the colour data the TV reports
 -- bitdepth = 10 is needed for HDR without banding. If the screen goes black,
 -- set it back to 8 (and check "HDMI Ultra HD Deep Colour" on the TV).
+-- If HDR looks washed out, raise sdrsaturation (e.g. 1.15) and sdrbrightness.
 
-hl.monitor({
+local M = {
+	hdr_in_game_mode = true, -- game mode turns HDR on (setupde-hdr)
+}
+
+M.rule = {
 	output   = "",
 	mode     = "3840x2160@119.88",
 	position = "auto",
 	scale    = "2.666667",
 	bitdepth = 10,
-	cm       = "srgb", -- HDR mode, see above
+	cm       = "srgb", -- outside game mode, see above (setupde-hdr)
 	-- how bright / colourful normal (SDR) content looks while HDR is on
 	sdrbrightness = 1.2,
 	sdrsaturation = 1.0,
-})
+}
+
+hl.monitor(M.rule)
+
+return M
