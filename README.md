@@ -365,6 +365,17 @@ stops the card from suspending (otherwise the monitors lose the digital signal a
 audio stops), and lets PipeWire follow the music's sample rate (44.1/48/88.2/96 kHz).
 `setupde-fireface channels` shows what PipeWire sees, `setupde-fireface remove` undoes it.
 
+**No sound?** Click the volume icon → *Fix sound…*, or run `setupde-fireface fix`. It checks every
+step from the apps to the Genelecs:
+- the Fireface connected and in Pro Audio mode;
+- the Genelec output set up and linked to the Fireface;
+- the default output;
+- mutes and volume.
+
+It repairs what it can, then plays a test tone. If you don't hear it, it lists what to check on the
+Fireface and the Genelecs. The Genelec output also has a high priority: if the default output ever
+disappears (for example HDMI audio when the screen switches HDR), sound falls back to the Genelecs.
+
 **Too quiet?** `setupde-fireface levels` lists every volume stage between the apps and the AES output
 (panel volume, the internal link, the Fireface output, the card's hardware controls).
 `setupde-fireface max` sets them all to full (0 dB), so the panel volume is the only control.
@@ -382,6 +393,7 @@ or the monitors' own level.
   `hyprctl --instance 0 dispatch 'hl.dsp.exec_cmd("swaylock -f")'`, go back with `Ctrl+Alt+F7` and
   type your password. Or unlock right away with
   `hyprctl --instance 0 eval 'hl.clear_crashed_lockscreen()'`.
+* **No sound:** volume icon → *Fix sound…* (or `setupde-fireface fix`), see the Fireface section.
 * **Locked out after being away / a moving picture on screen:** that's PikaOS's own lock screen
   (otter-lock, started by otter-idle after 5 minutes). Move the mouse or press a key, then type your
   password. If nothing reacts, press `Ctrl+Alt+F3`, log in, run `loginctl unlock-sessions`

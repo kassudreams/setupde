@@ -11,6 +11,9 @@
 #   setupde-fireface levels       show every volume stage between apps and the AES out
 #   setupde-fireface max          set all of them to full (0 dB) - then use the
 #                                 panel volume as the only control
+#   setupde-fireface fix          no sound? checks every step from the apps to the
+#                                 Genelecs, repairs what it can, plays a test tone
+#                                 (also "Fix sound…" in the volume icon's menu)
 #   setupde-fireface remove       undo (delete the config files)
 #
 # What setup does:
@@ -19,6 +22,9 @@
 #      channels, and makes it the default output (panel volume controls it)
 #   3. keeps the card from suspending, so the Genelecs don't lose the digital
 #      signal (and click / mute) every time audio stops
+#   4. gives the Genelec output a high priority, so if the default output ever
+#      disappears (HDMI audio re-plugging when the screen switches HDR, the
+#      Fireface reconnecting) sound falls back to the Genelecs, not the monitor
 #
 # Channel numbers are 1-based, as on the Fireface. Which playback channels
 # reach the AES output depends on the Fireface's own routing: on this UCX II in
@@ -69,8 +75,8 @@ aux_pair() { # 1-based first channel -> "AUXn AUXn+1"
 	echo "AUX$n AUX$((n + 1))"
 }
 
-# loopback FILE NODE_NAME DESCRIPTION FIRST_CHANNEL PRO_SINK: a stereo output
-# that feeds two channels of the card
+# loopback FILE NODE_NAME DESCRIPTION FIRST_CHANNEL PRO_SINK PRIORITY: a stereo
+# output that feeds two channels of the card
 loopback() {
 	cat > "$1" <<EOF
 # Written by setupde-fireface: stereo output "$3" -> Fireface channels $4-$(($4 + 1))
@@ -82,6 +88,9 @@ context.modules = [
         node.name      = "$2"
         media.class    = "Audio/Sink"
         audio.position = [ FL FR ]
+        # chosen when the remembered default output is gone (HDMI/onboard: ~1000)
+        priority.session = ${6:-2000}
+        priority.driver  = ${6:-2000}
       }
       playback.props = {
         node.name          = "$2.output"
@@ -95,6 +104,78 @@ context.modules = [
   }
 ]
 EOF
+}
+
+# The Genelec output, plus PipeWire following the music's sample rate
+genelec_conf() { # FIRST_CHANNEL PRO_SINK
+	loopback "$PW_CONF" "$SINK_NAME" "Genelec 8330A (AES)" "$1" "$2" 2000
+	cat >> "$PW_CONF" <<EOF
+
+# Follow the music's sample rate instead of resampling everything to 48 kHz
+# (the Genelecs relock for a moment when the rate changes)
+context.properties = {
+  default.clock.rate          = 48000
+  default.clock.allowed-rates = [ 44100 48000 88200 96000 ]
+}
+EOF
+}
+
+# Keep the card on Pro Audio and never let it suspend
+wp_conf() { # CARD
+	cat > "$WP_CONF" <<EOF
+# Written by setupde-fireface
+monitor.alsa.rules = [
+  { matches = [ { device.name = "$1" } ]
+    actions = { update-props = { device.profile = "pro-audio" } }
+  }
+  { matches = [ { node.name = "~alsa_output.*${1#alsa_card.}.*" } ]
+    actions = { update-props = { session.suspend-timeout-seconds = 0 } }
+  }
+]
+EOF
+}
+
+wait_pw() { # until PipeWire answers again (up to 10 s)
+	local i
+	for i in $(seq 20); do pactl info >/dev/null 2>&1 && return 0; sleep 0.5; done
+	return 1
+}
+
+restart_pw() {
+	systemctl --user restart wireplumber pipewire pipewire-pulse
+	wait_pw
+}
+
+wait_sink() { # NAME: until the sink exists (up to 10 s)
+	local i
+	for i in $(seq 20); do
+		pactl list sinks short 2>/dev/null | awk '{print $2}' | grep -qx "$1" && return 0
+		sleep 0.5
+	done
+	return 1
+}
+
+# Make a sink the default. Right after a restart WirePlumber needs a moment
+# before it accepts that ("Failure: Not supported"), so keep trying for 10 s.
+set_default() {
+	local i
+	for i in $(seq 20); do
+		if pactl set-default-sink "$1" 2>/dev/null && [ "$(pactl get-default-sink 2>/dev/null)" = "$1" ]; then
+			return 0
+		fi
+		sleep 0.5
+	done
+	return 1
+}
+
+# Move everything that's playing to a sink. Pinned streams stay where they
+# are: the Genelec output's own link to the card is one of them.
+move_streams() {
+	pactl list sink-inputs 2>/dev/null | awk '
+		/^Sink Input #/ { if (id != "" && !pinned) print id; id = substr($3, 2); pinned = 0 }
+		/node.dont-reconnect = "true"/ { pinned = 1 }
+		END { if (id != "" && !pinned) print id }' |
+	while read -r id; do pactl move-sink-input "$id" "$1" >/dev/null 2>&1; done
 }
 
 setup() {
@@ -113,43 +194,23 @@ setup() {
 	pos="$(aux_pair "$first")"
 	echo "==> Creating the stereo 'Genelec 8330A (AES)' output on channels $first-$((first + 1)) ($pos)"
 	mkdir -p "$(dirname "$PW_CONF")" "$(dirname "$WP_CONF")"
-	loopback "$PW_CONF" "$SINK_NAME" "Genelec 8330A (AES)" "$first" "$s"
-	cat >> "$PW_CONF" <<EOF
-
-# Follow the music's sample rate instead of resampling everything to 48 kHz
-# (the Genelecs relock for a moment when the rate changes)
-context.properties = {
-  default.clock.rate          = 48000
-  default.clock.allowed-rates = [ 44100 48000 88200 96000 ]
-}
-EOF
+	genelec_conf "$first" "$s"
 
 	echo "==> Keeping the card on Pro Audio and never suspending it"
-	cat > "$WP_CONF" <<EOF
-# Written by setupde-fireface
-monitor.alsa.rules = [
-  { matches = [ { device.name = "$c" } ]
-    actions = { update-props = { device.profile = "pro-audio" } }
-  }
-  { matches = [ { node.name = "~alsa_output.*${c#alsa_card.}.*" } ]
-    actions = { update-props = { session.suspend-timeout-seconds = 0 } }
-  }
-]
-EOF
+	wp_conf "$c"
 
 	echo "==> Restarting PipeWire"
-	systemctl --user restart wireplumber pipewire pipewire-pulse
-	for _ in $(seq 20); do
-		pactl list sinks short 2>/dev/null | grep -q "$SINK_NAME" && break
-		sleep 0.5
-	done
-	if pactl list sinks short | grep -q "$SINK_NAME"; then
-		pactl set-default-sink "$SINK_NAME"
+	restart_pw
+	wait_sink "$SINK_NAME" || die "the Genelec output didn't appear - send the output of: setupde-fireface channels"
+	if set_default "$SINK_NAME"; then
+		move_streams "$SINK_NAME"
 		echo
 		echo "Done. 'Genelec 8330A (AES)' is now the default output."
 		echo "Check it with:  setupde-fireface test $first"
 	else
-		die "the Genelec output didn't appear - send the output of: setupde-fireface channels"
+		echo
+		echo "The Genelec output is there, but it couldn't be made the default output."
+		echo "Pick 'Genelec 8330A (AES)' with the volume icon in the panel, or run:  setupde-fireface fix"
 	fi
 }
 
@@ -159,8 +220,8 @@ headphones() {
 	s="$(pro_sink "$c")"
 	[ -n "$s" ] || die "set up the Genelecs first: setupde-fireface setup"
 	echo "==> Adding 'Headphones (Fireface)' on channels $first-$((first + 1)) ($(aux_pair "$first"))"
-	loopback "$PHONES_CONF" "$PHONES_NAME" "Headphones (Fireface)" "$first" "$s"
-	systemctl --user restart wireplumber pipewire pipewire-pulse
+	loopback "$PHONES_CONF" "$PHONES_NAME" "Headphones (Fireface)" "$first" "$s" 1900
+	restart_pw
 	echo
 	echo "Done. Pick 'Headphones (Fireface)' with the volume icon in the panel."
 	echo "No sound in the headphones? Find their channels with  setupde-fireface test N"
@@ -246,6 +307,173 @@ max() {
 	echo "check the Fireface front panel: the AES output level and what the big knob controls."
 }
 
+# ---------------------------------------------------------------- fix
+# No sound? Walk the chain apps -> Genelec output -> card -> AES, repair what
+# can be repaired, and say exactly what's left.
+
+ok()    { echo "  ✓ $*"; }
+fixed() { echo "  ⟳ $*"; }
+bad()   { echo "  ✗ $*"; }
+
+sink_index() { pactl list sinks short 2>/dev/null | awk -v n="$1" '$2 == n { print $1; exit }'; }
+
+# FIELD of sink input ID ("Sink", "Mute", "Volume")
+input_field() {
+	pactl list sink-inputs 2>/dev/null | awk -v id="$1" -v f="$2:" '
+		/^Sink Input #/ { on = (substr($3, 2) == id) }
+		on && $1 == f { $1 = ""; sub(/^ /, ""); print; exit }'
+}
+
+first_percent() { grep -o '[0-9]*%' | head -n1 | tr -d %; }
+
+fix_mutes() { # SINK...
+	local sk v
+	for sk in "$@"; do
+		[ -n "$sk" ] || continue
+		if pactl get-sink-mute "$sk" 2>/dev/null | grep -q yes; then
+			pactl set-sink-mute "$sk" 0 && fixed "'$sk' was muted: unmuted it"
+		fi
+	done
+}
+
+fix() {
+	local c s first in def v idx ctl muted=0 tmp ans
+	echo "Checking the sound, step by step:"
+
+	if pactl info >/dev/null 2>&1; then
+		ok "the sound system (PipeWire) is running"
+	elif restart_pw; then
+		fixed "the sound system wasn't answering: restarted it"
+	else
+		bad "the sound system doesn't start. Send the output of:  systemctl --user status pipewire wireplumber"
+		return 1
+	fi
+
+	if ! grep -qi -E 'fireface|rme' /proc/asound/cards 2>/dev/null; then
+		bad "the Fireface isn't connected: switch it on, check the USB cable, and that it's in"
+		echo "    class compliant (CC) mode. Then run this again."
+		def="$(pactl get-default-sink 2>/dev/null)"
+		[ -n "$def" ] && fix_mutes "$def"
+		return 1
+	fi
+	ok "the Fireface is connected"
+
+	c="$(card)"
+	if [ -z "$c" ]; then
+		restart_pw
+		for _ in $(seq 20); do c="$(card)"; [ -n "$c" ] && break; sleep 0.5; done
+		if [ -z "$c" ]; then
+			bad "the sound system doesn't see the Fireface. Unplug it, plug it back in, run this again."
+			return 1
+		fi
+		fixed "the sound system didn't see the Fireface: restarted it"
+	else
+		ok "the sound system sees the Fireface"
+	fi
+
+	if pactl list cards 2>/dev/null | awk -v c="$c" '$1 == "Name:" { on = ($2 == c) } on && /Active Profile:/ { print $3; exit }' | grep -qx pro-audio; then
+		ok "the Fireface is in Pro Audio mode"
+	elif pactl set-card-profile "$c" pro-audio 2>/dev/null; then
+		sleep 1
+		fixed "the Fireface wasn't in Pro Audio mode: switched it"
+	else
+		bad "couldn't switch the Fireface to Pro Audio mode"
+	fi
+	s="$(pro_sink "$c")"
+	if [ -z "$s" ]; then
+		bad "the Fireface has no Pro Audio output. Send the output of:  setupde-fireface channels"
+		return 1
+	fi
+
+	first="$(current_first)"
+	if [ -f "$PW_CONF" ] && grep -qF "\"$s\"" "$PW_CONF" && grep -q 'priority.session' "$PW_CONF" && [ -f "$WP_CONF" ]; then
+		ok "the Genelec output is set up (channels $first-$((first + 1)))"
+	else
+		mkdir -p "$(dirname "$PW_CONF")" "$(dirname "$WP_CONF")"
+		genelec_conf "$first" "$s"
+		wp_conf "$c"
+		if [ -f "$PHONES_CONF" ]; then
+			local pf
+			pf="$(grep -o 'AUX[0-9]*' "$PHONES_CONF" | head -n1 | tr -dc 0-9)"
+			[ -n "$pf" ] && loopback "$PHONES_CONF" "$PHONES_NAME" "Headphones (Fireface)" "$((pf + 1))" "$s" 1900
+		fi
+		restart_pw
+		fixed "the Genelec output was missing or out of date: wrote it again (channels $first-$((first + 1)))"
+	fi
+	if ! wait_sink "$SINK_NAME"; then
+		bad "the Genelec output doesn't appear. Send the output of:  journalctl --user -u pipewire -n 20"
+		return 1
+	fi
+
+	in=""
+	for _ in $(seq 10); do in="$(input_of)"; [ -n "$in" ] && break; sleep 0.5; done
+	if [ -z "$in" ]; then
+		bad "the link from the Genelec output to the Fireface is missing. Send the output of:  setupde-fireface levels"
+	elif [ "$(input_field "$in" Sink)" = "$(sink_index "$s")" ]; then
+		ok "the Genelec output feeds the Fireface"
+	elif pactl move-sink-input "$in" "$s" 2>/dev/null; then
+		fixed "the Genelec output was linked to the wrong device: linked it to the Fireface"
+	else
+		bad "couldn't link the Genelec output to the Fireface"
+	fi
+
+	def="$(pactl get-default-sink 2>/dev/null)"
+	if [ "$def" = "$SINK_NAME" ] || [ "$def" = "$PHONES_NAME" ]; then
+		ok "sound goes to: $def"
+	elif set_default "$SINK_NAME"; then
+		move_streams "$SINK_NAME"
+		fixed "sound was going to '${def:-nowhere}': now it goes to the Genelecs"
+	else
+		bad "couldn't make the Genelecs the default output: pick them with the volume icon"
+	fi
+
+	fix_mutes "$SINK_NAME" "$s"
+	v="$(pactl get-sink-volume "$SINK_NAME" 2>/dev/null | first_percent)"
+	if [ -n "$v" ] && [ "$v" -lt 5 ]; then
+		pactl set-sink-volume "$SINK_NAME" 30% && fixed "the Genelec volume was at $v%: set it to 30%"
+	fi
+	if [ -n "$in" ]; then
+		if [ "$(input_field "$in" Mute)" = yes ]; then
+			pactl set-sink-input-mute "$in" 0 && fixed "the link to the Fireface was muted: unmuted it"
+		fi
+		v="$(input_field "$in" Volume | first_percent)"
+		if [ -n "$v" ] && [ "$v" -lt 100 ]; then
+			pactl set-sink-input-volume "$in" 100% && fixed "the link to the Fireface was at $v%: set it to 100%"
+		fi
+	fi
+	idx="$(alsa_card_index)"
+	if [ -n "$idx" ]; then
+		while IFS= read -r ctl; do
+			if amixer -c "$idx" sget "$ctl" 2>/dev/null | grep -q 'Playback.*\[off\]'; then
+				amixer -c "$idx" -q sset "$ctl" unmute 2>/dev/null && muted=1
+			fi
+		done < <(amixer -c "$idx" scontrols 2>/dev/null | sed -n "s/^Simple mixer control '\(.*\)',[0-9]*$/\1/p")
+		[ "$muted" = 1 ] && fixed "some of the Fireface's own controls were muted: unmuted them"
+	fi
+	ok "nothing is muted now"
+
+	echo
+	echo "Playing a test tone through the Genelecs: left, then right."
+	tmp="$(mktemp --suffix=.wav)"
+	tone "$tmp"
+	pw-play --target "$SINK_NAME" "$tmp" 2>/dev/null
+	rm -f "$tmp"
+	read -rp "Did you hear it? [y/n] " ans
+	case "$ans" in
+		[yYkK]*) echo "Good, the sound works." ;;
+		*)
+			echo
+			echo "The computer side is fine now, so it's in the hardware or its settings:"
+			echo "  - Fireface front panel: is the AES output turned up and not muted?"
+			echo "  - TotalMix routing (stored in the Fireface): playback $first-$((first + 1)) must go to AES"
+			echo "  - Genelecs: switched on, AES input selected, level up"
+			echo "  - the AES/EBU cable"
+			echo "To find the channels that reach the Genelecs, try:  setupde-fireface test 3"
+			echo "and  setupde-fireface test 9  - then  setupde-fireface setup N  with the one you hear."
+			;;
+	esac
+}
+
 remove() {
 	rm -f "$PW_CONF" "$PHONES_CONF" "$WP_CONF"
 	systemctl --user restart wireplumber pipewire pipewire-pulse
@@ -259,6 +487,7 @@ case "${1:-setup}" in
 	channels) channels ;;
 	levels)   levels ;;
 	max)      max ;;
+	fix)      fix ;;
 	remove)   remove ;;
-	*) sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+	*) sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

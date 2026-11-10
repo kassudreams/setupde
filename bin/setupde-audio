@@ -6,7 +6,8 @@
   setupde-audio next     switch to the next output
 
 Picking an output makes it the default and moves everything that's playing
-to it. Onboard audio with several jacks (headphones, line out) gets a line
+to it. "Fix sound…" runs setupde-fireface fix in a terminal when nothing
+plays. Onboard audio with several jacks (headphones, line out) gets a line
 per jack. The Fireface's raw channels are hidden once the Genelec output
 exists (setupde-fireface): that output is what feeds them.
 """
@@ -15,7 +16,7 @@ import subprocess
 import sys
 
 ICON = {"speaker": "\U000F04C3", "headphones": "\U000F02CB", "monitor": "\U000F0379",
-        "bluetooth": "\U000F00AF", "settings": "\U000F0493"}
+        "bluetooth": "\U000F00AF", "settings": "\U000F0493", "fix": "\U000F0AD7"}
 OURS = ("genelec_aes", "fireface_phones")  # outputs made by setupde-fireface
 
 
@@ -120,6 +121,7 @@ def menu(items):
     cur = current_index(items)
     lines = ["%s  %s%s" % (it["icon"], it["label"], "  ✓" if i == cur else "")
              for i, it in enumerate(items)]
+    lines.append("%s  Fix sound…" % ICON["fix"])
     lines.append("%s  Sound settings…" % ICON["settings"])
     res = subprocess.run(["fuzzel", "--dmenu", "--index", "--prompt", "Sound: ", "--width", "46",
                           "--lines", str(min(len(lines), 10))],
@@ -129,6 +131,11 @@ def menu(items):
         return
     i = int(pick)
     if i == len(items):
+        # checks everything from the apps to the Genelecs (setupde-fireface fix)
+        subprocess.Popen(["foot", "-T", "Fix sound", "sh", "-c",
+                          "setupde-fireface fix; echo; printf 'Press Enter to close. '; read _"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    elif i == len(items) + 1:
         subprocess.Popen(["pavucontrol"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          start_new_session=True)
     elif i != cur:
