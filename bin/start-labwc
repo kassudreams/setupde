@@ -10,6 +10,8 @@
 #   available ($XDG_RUNTIME_DIR/setupde-no-hdr). SETUPDE_RENDERER=gles2 (or
 #   vulkan) picks one yourself
 # - arguments go to labwc, e.g. `start-labwc -d` for a detailed log
+# - PATH gets what a normal login has (/usr/games for Lutris, ~/.local/bin),
+#   even when the login screen starts the session without it
 # - without systemd (Void) the session gets its own D-Bus bus; with systemd
 #   (PikaOS) labwc passes its environment to the user's services itself
 # Log: ~/.local/state/labwc.log
@@ -34,6 +36,21 @@ if [ -n "$nvidia" ]; then
 		export __GLX_VENDOR_LIBRARY_NAME=nvidia LIBVA_DRIVER_NAME=nvidia NVD_BACKEND=direct
 	fi
 fi
+
+# ---- PATH: the usual login one. The login screen may start the session
+# without the login profile, so /usr/games (Lutris and other games on
+# PikaOS/Debian) and ~/.local/bin (programs you installed) would be missing.
+path_add() { # DIR first|last: add DIR if it exists and isn't there yet
+	[ -d "$1" ] || return 0
+	case ":$PATH:" in *":$1:"*) return 0 ;; esac
+	if [ "$2" = first ]; then PATH="$1:$PATH"; else PATH="$PATH:$1"; fi
+}
+[ -n "${PATH:-}" ] || PATH=/usr/local/bin:/usr/bin:/bin
+path_add /usr/local/games last
+path_add /usr/games last
+path_add "$HOME/bin" first
+path_add "$HOME/.local/bin" first
+export PATH
 
 # ---- GNU Guix (if installed): its programs, app launchers and language data.
 # Guix's own `guix` comes first, its other programs after the system's ones.
