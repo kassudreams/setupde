@@ -1,0 +1,277 @@
+<?xml version="1.0"?>
+<!--
+  labwc config - setupde (PikaOS, labwc 0.20+)
+  Full reference: man 5 labwc-config, man 5 labwc-actions
+  Apply changes without logging out: Super+Shift+R (Reconfigure)
+
+  Windows float, and snap like on Windows:
+    Super+Left/Right    left / right half (then Up/Down for a quarter)
+    Super+Up            big; a half goes to its top quarter (again: big)
+    Super+Down          back to its own size; a half goes to its bottom
+                        quarter; a bottom quarter or a window at its own
+                        size is minimized (click it in the dock to restore)
+    drag to an edge     let go there: left/right half, top big, corner quarter
+    double-click title  big <-> own size
+-->
+<labwc_config>
+
+  <core>
+    <decoration>server</decoration>
+    <gap>8</gap>
+    <!-- VRR (G-Sync / FreeSync) for full screen windows: games, videos -->
+    <adaptiveSync>fullscreen</adaptiveSync>
+    <allowTearing>no</allowTearing>
+    <!-- HDR for the whole screen: game mode (Super+G) switches this.
+         Change the default with `setupde-hdr game|on|off`. Needs the Vulkan
+         renderer, which start-labwc uses when the graphics driver allows. -->
+    <hdr>no</hdr>
+    <!-- keep the mode the screen already has: less flicker at login -->
+    <reuseOutputMode>yes</reuseOutputMode>
+  </core>
+
+  <placement>
+    <policy>cascade</policy>
+    <cascadeOffset x="40" y="30" />
+  </placement>
+
+  <theme>
+    <icon>Papirus-Dark</icon>
+    <fallbackAppIcon>application-x-executable</fallbackAppIcon>
+    <titlebar>
+      <layout>icon:iconify,max,close</layout>
+      <showTitle>yes</showTitle>
+    </titlebar>
+    <cornerRadius>10</cornerRadius>
+    <keepBorder>yes</keepBorder>
+    <dropShadows>yes</dropShadows>
+    <font>
+      <name>Inter</name>
+      <size>10</size>
+    </font>
+    <font place="ActiveWindow">
+      <name>Inter</name>
+      <size>10</size>
+      <weight>bold</weight>
+    </font>
+  </theme>
+
+  <windowSwitcher preview="yes" outlines="yes">
+    <osd show="yes" style="classic" output="focused" />
+    <fields>
+      <field content="icon" width="5%" />
+      <field content="desktop_entry_name" width="30%" />
+      <field content="title" width="65%" />
+    </fields>
+  </windowSwitcher>
+
+  <desktops>
+    <popupTime>600</popupTime>
+    <names>
+      <name>1</name>
+      <name>2</name>
+      <name>3</name>
+      <name>4</name>
+    </names>
+  </desktops>
+
+  <focus>
+    <followMouse>no</followMouse>
+    <raiseOnFocus>no</raiseOnFocus>
+  </focus>
+
+  <!-- Drag a window to an edge or corner and let go: it snaps there. A blue
+       overlay shows where it will go. -->
+  <snapping>
+    <range inner="10" outer="10" />
+    <cornerRange>50</cornerRange>
+    <overlay enabled="yes">
+      <delay inner="150" outer="150" />
+    </overlay>
+    <topMaximize>yes</topMaximize>
+    <notifyClient>always</notifyClient>
+  </snapping>
+
+  <!-- Regions for Super+numpad (and SnapToRegion actions) -->
+  <regions>
+    <region name="top-left"     x="0%"  y="0%"  height="50%"  width="50%"  />
+    <region name="top"          x="0%"  y="0%"  height="50%"  width="100%" />
+    <region name="top-right"    x="50%" y="0%"  height="50%"  width="50%"  />
+    <region name="left"         x="0%"  y="0%"  height="100%" width="50%"  />
+    <region name="center"       x="15%" y="10%" height="80%"  width="70%"  />
+    <region name="right"        x="50%" y="0%"  height="100%" width="50%"  />
+    <region name="bottom-left"  x="0%"  y="50%" height="50%"  width="50%"  />
+    <region name="bottom"       x="0%"  y="50%" height="50%"  width="100%" />
+    <region name="bottom-right" x="50%" y="50%" height="50%"  width="50%"  />
+    <region name="left-third"   x="0%"  y="0%"  height="100%" width="33%"  />
+    <region name="right-third"  x="67%" y="0%"  height="100%" width="33%"  />
+    <region name="left-two"     x="0%"  y="0%"  height="100%" width="67%"  />
+    <region name="right-two"    x="33%" y="0%"  height="100%" width="67%"  />
+  </regions>
+
+  <keyboard>
+    <!-- labwc's defaults (Alt+Tab, Super+D show desktop, ...), then these -->
+    <default />
+    <numlock>on</numlock>
+    <repeatRate>30</repeatRate>
+    <repeatDelay>300</repeatDelay>
+
+    <!-- Apps -->
+    <keybind key="W-Return"><action name="Execute" command="foot" /></keybind>
+    <keybind key="W-space"><action name="Execute" command="fuzzel" /></keybind>
+    <keybind key="W-r"><action name="Execute" command="fuzzel" /></keybind>
+    <keybind key="W-S-space"><action name="Execute" command="setupde-dock pin" /></keybind>
+    <keybind key="W-e"><action name="Execute" command="thunar" /></keybind>
+    <keybind key="W-b"><action name="Execute" command="sh -c 'exec $(command -v brave-browser firefox chromium google-chrome-stable | head -n1)'" /></keybind>
+    <keybind key="W-v"><action name="Execute" command="setupde-clipboard" /></keybind>
+    <keybind key="W-l"><action name="Execute" command="swaylock -f" /></keybind>
+    <keybind key="W-Escape"><action name="Execute" command="setupde-powermenu" /></keybind>
+    <keybind key="C-A-Delete"><action name="Execute" command="setupde-powermenu" /></keybind>
+    <keybind key="W-n"><action name="Execute" command="makoctl dismiss --all" /></keybind>
+    <keybind key="W-g"><action name="Execute" command="setupde-gamemode" /></keybind>
+    <keybind key="W-F1"><action name="Execute" command="setupde-keys" /></keybind>
+
+    <!-- Screenshots (saved to ~/Pictures/Screenshots and copied) -->
+    <keybind key="Print"><action name="Execute" command="setupde-screenshot area" /></keybind>
+    <keybind key="S-Print"><action name="Execute" command="setupde-screenshot full" /></keybind>
+    <keybind key="C-Print"><action name="Execute" command="setupde-screenshot edit" /></keybind>
+
+    <!-- Windows -->
+    <keybind key="W-q"><action name="Close" /></keybind>
+    <keybind key="A-F4"><action name="Close" /></keybind>
+    <keybind key="W-f"><action name="ToggleFullscreen" /></keybind>
+    <keybind key="W-m"><action name="ToggleMaximize" /></keybind>
+    <keybind key="W-h"><action name="Iconify" /></keybind>
+    <!-- own size, in the middle of the screen -->
+    <keybind key="W-c"><action name="UnSnap" /><action name="AutoPlace" policy="center" /></keybind>
+    <keybind key="W-p"><action name="ToggleAlwaysOnTop" /></keybind>
+    <keybind key="W-Tab"><action name="NextWindow" /></keybind>
+    <keybind key="W-S-Tab"><action name="PreviousWindow" /></keybind>
+
+    <!-- Snapping like Windows -->
+    <keybind key="W-Left"><action name="SnapToEdge" direction="left" combine="yes" /></keybind>
+    <keybind key="W-Right"><action name="SnapToEdge" direction="right" combine="yes" /></keybind>
+    <!-- Up: a half -> its top quarter, a top quarter -> big, else big.
+         Down: big -> back, a half -> its bottom quarter, a bottom quarter or
+         a window at its own size -> minimized. -->
+    <keybind key="W-Up">
+      <action name="If">
+        <query tiled="up-left" />
+        <query tiled="up-right" />
+        <then><action name="Maximize" /></then>
+        <else>
+          <action name="If">
+            <query tiled="any" />
+            <then><action name="SnapToEdge" direction="up" combine="yes" /></then>
+            <else><action name="Maximize" /></else>
+          </action>
+        </else>
+      </action>
+    </keybind>
+    <keybind key="W-Down">
+      <action name="If">
+        <query maximized="both" />
+        <then><action name="UnMaximize" /></then>
+        <else>
+          <action name="If">
+            <query tiled="down-left" />
+            <query tiled="down-right" />
+            <then><action name="Iconify" /></then>
+            <else>
+              <action name="If">
+                <query tiled="any" />
+                <then><action name="SnapToEdge" direction="down" combine="yes" /></then>
+                <else><action name="Iconify" /></else>
+              </action>
+            </else>
+          </action>
+        </else>
+      </action>
+    </keybind>
+    <!-- thirds: Super+Alt+Left/Right -->
+    <keybind key="W-A-Left"><action name="ToggleSnapToRegion" region="left-third" /></keybind>
+    <keybind key="W-A-Right"><action name="ToggleSnapToRegion" region="right-third" /></keybind>
+
+    <!-- Numpad: snap to a region (7 8 9 / 4 5 6 / 1 2 3 like the screen) -->
+    <keybind key="W-KP_7"><action name="SnapToRegion" region="top-left" /></keybind>
+    <keybind key="W-KP_8"><action name="SnapToRegion" region="top" /></keybind>
+    <keybind key="W-KP_9"><action name="SnapToRegion" region="top-right" /></keybind>
+    <keybind key="W-KP_4"><action name="SnapToRegion" region="left" /></keybind>
+    <keybind key="W-KP_5"><action name="SnapToRegion" region="center" /></keybind>
+    <keybind key="W-KP_6"><action name="SnapToRegion" region="right" /></keybind>
+    <keybind key="W-KP_1"><action name="SnapToRegion" region="bottom-left" /></keybind>
+    <keybind key="W-KP_2"><action name="SnapToRegion" region="bottom" /></keybind>
+    <keybind key="W-KP_3"><action name="SnapToRegion" region="bottom-right" /></keybind>
+
+    <!-- Workspaces -->
+    <keybind key="W-1"><action name="GoToDesktop" to="1" /></keybind>
+    <keybind key="W-S-1"><action name="SendToDesktop" to="1" follow="no" /></keybind>
+    <keybind key="W-2"><action name="GoToDesktop" to="2" /></keybind>
+    <keybind key="W-S-2"><action name="SendToDesktop" to="2" follow="no" /></keybind>
+    <keybind key="W-3"><action name="GoToDesktop" to="3" /></keybind>
+    <keybind key="W-S-3"><action name="SendToDesktop" to="3" follow="no" /></keybind>
+    <keybind key="W-4"><action name="GoToDesktop" to="4" /></keybind>
+    <keybind key="W-S-4"><action name="SendToDesktop" to="4" follow="no" /></keybind>
+    <keybind key="W-C-Left"><action name="GoToDesktop" to="left" /></keybind>
+    <keybind key="W-C-Right"><action name="GoToDesktop" to="right" /></keybind>
+    <keybind key="W-S-Left"><action name="SendToDesktop" to="left" /></keybind>
+    <keybind key="W-S-Right"><action name="SendToDesktop" to="right" /></keybind>
+
+    <!-- Session -->
+    <keybind key="W-S-r"><action name="Reconfigure" /></keybind>
+    <keybind key="W-S-e"><action name="Exit" /></keybind>
+
+    <!-- Media keys -->
+    <keybind key="XF86AudioRaiseVolume">
+      <action name="Execute" command="wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+" />
+    </keybind>
+    <keybind key="XF86AudioLowerVolume">
+      <action name="Execute" command="wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-" />
+    </keybind>
+    <keybind key="XF86AudioMute">
+      <action name="Execute" command="wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle" />
+    </keybind>
+    <keybind key="XF86AudioMicMute">
+      <action name="Execute" command="wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle" />
+    </keybind>
+    <keybind key="XF86AudioPlay"><action name="Execute" command="playerctl play-pause" /></keybind>
+    <keybind key="XF86AudioPause"><action name="Execute" command="playerctl play-pause" /></keybind>
+    <keybind key="XF86AudioNext"><action name="Execute" command="playerctl next" /></keybind>
+    <keybind key="XF86AudioPrev"><action name="Execute" command="playerctl previous" /></keybind>
+    <keybind key="XF86MonBrightnessUp">
+      <action name="Execute" command="brightnessctl set 5%+" />
+    </keybind>
+    <keybind key="XF86MonBrightnessDown">
+      <action name="Execute" command="brightnessctl set 5%-" />
+    </keybind>
+  </keyboard>
+
+  <mouse>
+    <!-- labwc's defaults: drag the title bar to move, double-click it for
+         big / own size, Super+drag moves, Super+right-drag resizes -->
+    <default />
+    <!-- Middle click on the desktop: list of all windows -->
+    <context name="Root">
+      <mousebind button="Middle" action="Press">
+        <action name="ShowMenu" menu="client-list-combined-menu" />
+      </mousebind>
+    </context>
+  </mouse>
+
+  <windowRules>
+    <!-- Night light popup: opens next to the panel icon it was clicked from -->
+    <windowRule identifier="setupde-nightlight" skipTaskbar="yes" skipWindowSwitcher="yes">
+      <action name="MoveToCursor" />
+      <action name="ToggleAlwaysOnTop" />
+    </windowRule>
+  </windowRules>
+
+  <libinput>
+    <device category="touchpad">
+      <tap>yes</tap>
+      <naturalScroll>yes</naturalScroll>
+      <disableWhileTyping>yes</disableWhileTyping>
+      <clickMethod>clickfinger</clickMethod>
+    </device>
+  </libinput>
+
+</labwc_config>

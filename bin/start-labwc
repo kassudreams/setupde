@@ -1,21 +1,94 @@
 #!/bin/sh
-# Start a labwc session. Used by greetd/tuigreet, or type `start-labwc` on a TTY.
-# dbus-run-session gives the session its own D-Bus bus (needed for
-# notifications, portals, tray icons, etc. on Void, which has no systemd).
+# Start a labwc session: chosen on the login screen ("labwc (setupde)" on
+# PikaOS, greetd/tuigreet on Void), or type `start-labwc` on a TTY.
+#
+# - hybrid graphics (CPU graphics + an NVIDIA card): uses the NVIDIA card,
+#   where the monitor is normally plugged in
+# - with an HDR setting in rc.xml (the PikaOS config) it uses the Vulkan
+#   renderer, which HDR needs (game mode, setupde-hdr). If labwc can't start
+#   with it, it starts again with the normal renderer and HDR is just not
+#   available ($XDG_RUNTIME_DIR/setupde-no-hdr). SETUPDE_RENDERER=gles2 (or
+#   vulkan) picks one yourself
+# - arguments go to labwc, e.g. `start-labwc -d` for a detailed log
+# - without systemd (Void) the session gets its own D-Bus bus; with systemd
+#   (PikaOS) labwc passes its environment to the user's services itself
+# Log: ~/.local/state/labwc.log
 export XDG_SESSION_TYPE=wayland
 export XDG_CURRENT_DESKTOP=labwc:wlroots
+export XDG_SESSION_DESKTOP=labwc
 
-# Hybrid graphics (e.g. a CPU with built-in graphics + an NVIDIA card): use the
-# NVIDIA card, which is where the monitor is normally plugged in.
-# Override by setting WLR_DRM_DEVICES yourself (e.g. /dev/dri/card1).
-if [ -z "${WLR_DRM_DEVICES:-}" ]; then
-	for card in /sys/class/drm/card[0-9]*; do
-		case "${card##*/}" in *-*) continue ;; esac  # skip connectors (card1-DP-1)
-		[ "$(cat "$card/device/vendor" 2>/dev/null)" = 0x10de ] || continue
-		export WLR_DRM_DEVICES="/dev/dri/${card##*/}"
-		break
-	done
+# ---- graphics
+nvidia=""
+for card in /sys/class/drm/card[0-9]*; do
+	case "${card##*/}" in *-*) continue ;; esac # skip connectors (card1-DP-1)
+	[ "$(cat "$card/device/vendor" 2>/dev/null)" = 0x10de ] || continue
+	nvidia="/dev/dri/${card##*/}"
+	break
+done
+if [ -n "$nvidia" ]; then
+	# override by setting WLR_DRM_DEVICES yourself (e.g. /dev/dri/card1)
+	[ -n "${WLR_DRM_DEVICES:-}" ] || export WLR_DRM_DEVICES="$nvidia"
+	# NVIDIA's own driver (not nouveau): GL and video decoding, the same as
+	# the Hyprland setup (hypr/env.lua)
+	if [ -d /sys/module/nvidia_drm ]; then
+		export __GLX_VENDOR_LIBRARY_NAME=nvidia LIBVA_DRIVER_NAME=nvidia NVD_BACKEND=direct
+	fi
 fi
 
+# ---- GNU Guix (if installed): its programs, app launchers and language data.
+# Guix's own `guix` comes first, its other programs after the system's ones.
+if [ -d "$HOME/.guix-profile" ] || [ -d "$HOME/.config/guix/current" ]; then
+	export PATH="$HOME/.config/guix/current/bin:${PATH:-/usr/local/bin:/usr/bin:/bin}:$HOME/.guix-profile/bin"
+	export XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:$HOME/.guix-profile/share"
+	export XCURSOR_PATH="${XCURSOR_PATH:-$HOME/.local/share/icons:$HOME/.icons:/usr/share/icons:/usr/share/pixmaps}:$HOME/.guix-profile/share/icons"
+	export GUIX_LOCPATH="$HOME/.guix-profile/lib/locale"
+fi
+
+# ---- start
 mkdir -p "$HOME/.local/state"
-exec dbus-run-session labwc "$@" > "$HOME/.local/state/labwc.log" 2>&1
+log="$HOME/.local/state/labwc.log"
+nohdr="${XDG_RUNTIME_DIR:-/tmp}/setupde-no-hdr"
+rm -f "$nohdr"
+
+launch() { # RENDERER [labwc arguments]
+	r="$1"
+	shift
+	if [ -d /run/systemd/system ]; then
+		WLR_RENDERER="$r" labwc "$@"
+	else
+		WLR_RENDERER="$r" dbus-run-session labwc "$@"
+	fi
+}
+
+# HDR starts off unless `setupde-hdr on` (game mode switches it), and is
+# always off without the Vulkan renderer
+hdr_reset() { command -v setupde-hdr >/dev/null && setupde-hdr session-start; }
+
+renderer="${SETUPDE_RENDERER:-}"
+if [ -z "$renderer" ]; then
+	if grep -qs '<hdr>' "${XDG_CONFIG_HOME:-$HOME/.config}/labwc/rc.xml"; then
+		renderer=vulkan
+	else
+		renderer=auto # wlroots' choice, as before
+	fi
+fi
+if [ "$renderer" = vulkan ]; then
+	hdr_reset
+	started=$(date +%s)
+	launch vulkan "$@" >"$log" 2>&1
+	status=$?
+	# a normal log out, or a session that ran for a while: done
+	if [ "$status" -eq 0 ] || [ $(($(date +%s) - started)) -ge 10 ]; then
+		exit "$status"
+	fi
+	# labwc gave up right away: most likely the Vulkan renderer. Keep its log.
+	mv -f "$log" "$log.vulkan"
+	echo "setupde: labwc didn't start with the Vulkan renderer (log: $log.vulkan)," >"$log"
+	echo "setupde: starting it with the normal renderer - HDR isn't available." >>"$log"
+	renderer=gles2
+else
+	: >"$log"
+fi
+: >"$nohdr"
+hdr_reset
+launch "$renderer" "$@" >>"$log" 2>&1

@@ -1,0 +1,24 @@
+# Environment for the labwc session. See: man 5 labwc-config (ENVIRONMENT)
+# start-labwc sets the graphics (NVIDIA, renderer) and Guix parts.
+
+# Keyboard layout (install.sh fills this in; change it, then log out/in)
+# Two layouts: XKB_DEFAULT_LAYOUT=fi,us plus XKB_DEFAULT_OPTIONS=grp:alt_shift_toggle
+XKB_DEFAULT_LAYOUT=@KB_LAYOUT@
+
+# Cursor
+XCURSOR_THEME=Adwaita
+XCURSOR_SIZE=24
+
+# Dark mode everywhere: GTK3 apps (Thunar, Lutris, ...) and libadwaita apps
+GTK_THEME=Adwaita:dark
+ADW_DEBUG_COLOR_SCHEME=prefer-dark
+
+# Prefer native Wayland in toolkits / apps
+MOZ_ENABLE_WAYLAND=1
+QT_QPA_PLATFORM=wayland;xcb
+QT_QPA_PLATFORMTHEME=@QT_THEME@
+ELECTRON_OZONE_PLATFORM_HINT=auto
+_JAVA_AWT_WM_NONREPARENTING=1
+
+# Default terminal
+TERMINAL=foot

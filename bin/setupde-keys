@@ -1,7 +1,39 @@
 #!/bin/sh
-# All keyboard shortcuts of the PikaOS Hyprland desktop (Super+F1, or
-# right-click the launcher icon in the panel). Just a list to read.
-cat <<'EOF' | fuzzel --dmenu --prompt "Shortcuts: " --lines 20 --width 52 >/dev/null
+# All keyboard shortcuts of the PikaOS desktop, labwc or Hyprland (Super+F1,
+# or right-click the launcher icon in the panel). Just a list to read.
+if [ -n "${LABWC_PID:-}" ]; then
+	cat <<'EOF'
+Super+Space            app launcher
+Super+Enter            terminal
+Super+E / Super+B      files / browser
+Super+V                clipboard history
+Super+← / →            snap to the left / right half
+Super+↑                big (a half: its top quarter)
+Super+↓                own size (a half: bottom quarter; own size: minimize)
+Super+Alt+← / →        left / right third (again: back)
+Super+numpad 1-9       that part of the screen (5: middle)
+Super+M                big <-> own size (or double-click the title bar)
+Super+H                minimize (click it in the dock to bring it back)
+Super+C                own size, centred
+Super+F                full screen
+Super+Q / Alt+F4       close
+Alt+Tab                next window
+Super+1..4             workspace 1-4 (Shift: move the window there)
+Super+Ctrl+← / →       previous / next workspace
+Super+P                keep on top
+Super+G                game mode: HDR on, notifications off
+Super+drag / right-drag   move / resize a window
+Drag to a screen edge  snap there (left/right: half, top: big, corner: quarter)
+Middle-click desktop   list of all windows
+Super+L                lock the screen
+Super+N                clear notifications
+Print                  screenshot of an area (Shift: whole screen)
+Super+Esc              power menu
+Super+Shift+R          reload the labwc config
+Super+F1               this list
+EOF
+else
+	cat <<'EOF'
 Super+Space            app launcher
 Super+Enter            terminal
 Super+E / Super+B      files / browser
@@ -29,3 +61,4 @@ Print                  screenshot of an area (Shift: whole screen)
 Super+Esc              power menu
 Super+F1               this list
 EOF
+fi | fuzzel --dmenu --prompt "Shortcuts: " --lines 20 --width 56 >/dev/null

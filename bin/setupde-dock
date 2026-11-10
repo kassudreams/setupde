@@ -198,10 +198,19 @@ icon() {
 	desktop_key "$f" Name
 }
 
+# App ids of the open windows: from Hyprland, or on labwc (and other wlroots
+# desktops) from `wlrctl toplevel list` ("app_id: title" per window)
+open_classes() {
+	if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && command -v hyprctl >/dev/null; then
+		hyprctl clients -j 2>/dev/null | grep -o '"class": *"[^"]*"' | sed 's/.*: *"\(.*\)"/\1/'
+	else
+		wlrctl toplevel list 2>/dev/null | sed 's/: .*$//'
+	fi
+}
+
 update_running() {
 	local new
-	new="$(hyprctl clients -j 2>/dev/null | grep -o '"class": *"[^"]*"' |
-		sed 's/.*: *"\(.*\)"/\1/' | tr '[:upper:]' '[:lower:]' | sort -u)"
+	new="$(open_classes | tr '[:upper:]' '[:lower:]' | sort -u)"
 	if [ "$new" != "$(cat "$RUNNING" 2>/dev/null)" ]; then
 		printf '%s\n' "$new" > "$RUNNING"
 		pkill "-RTMIN+$SIGNAL" -x waybar 2>/dev/null || true

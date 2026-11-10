@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Night light + screen brightness for Hyprland, using hyprsunset.
+"""Night light + screen brightness: hyprsunset on Hyprland, gammastep on
+labwc (and other wlroots desktops).
 
   setupde-nightlight            open the popup (toggle + sliders)
   setupde-nightlight toggle     night light on/off (right-click in waybar)
   setupde-nightlight status     waybar JSON
-  setupde-nightlight restore    start hyprsunset with the saved settings (autostart)
+  setupde-nightlight restore    apply the saved settings (autostart)
+  setupde-nightlight pause      normal colours for now, brightness kept (game mode)
   setupde-nightlight resume     put the saved settings back (after game mode)
 
 Brightness is a software dimmer (gamma), so it works on any screen,
@@ -38,6 +40,24 @@ def save(state):
         json.dump(state, f)
 
 
+def on_hyprland():
+    return bool(os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")) and shutil.which("hyprsunset") is not None
+
+
+def start_gammastep(state):
+    """gammastep keeps running while the colours apply (wlroots resets them
+    when it exits), so a change means starting it again."""
+    subprocess.run(["pkill", "-x", "gammastep"], capture_output=True)
+    temp = state["temperature"] if state["enabled"] else 6500
+    if temp >= 6500 and state["brightness"] >= 100:
+        return  # normal colours: nothing has to run
+    if not shutil.which("gammastep"):
+        return
+    subprocess.Popen(["gammastep", "-m", "wayland", "-c", "/dev/null", "-O", str(temp),
+                      "-b", "%.2f" % (state["brightness"] / 100)],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+
 def hyprsunset_running():
     return subprocess.run(["pgrep", "-x", "hyprsunset"], capture_output=True).returncode == 0
 
@@ -52,8 +72,9 @@ def start_hyprsunset(state):
 
 
 def apply(state):
-    """Send the settings to the running hyprsunset (start it if needed)."""
-    if not shutil.which("hyprsunset"):
+    """Apply the settings: hyprsunset on Hyprland, gammastep elsewhere."""
+    if not on_hyprland():
+        start_gammastep(state)
         return
     if not hyprsunset_running():
         start_hyprsunset(state)
@@ -101,14 +122,15 @@ def popup():
         state["brightness"] = int(bright.get_value())
         temp.set_sensitive(state["enabled"])
         save(state)
-        # apply at most every 80 ms while dragging
+        # apply at most every 80 ms while dragging (gammastep has to restart
+        # for every change, so less often there)
         if pending["id"] is None:
             def run():
                 pending["id"] = None
                 apply(state)
                 refresh_waybar()
                 return False
-            pending["id"] = GLib.timeout_add(80, run)
+            pending["id"] = GLib.timeout_add(80 if on_hyprland() else 250, run)
 
     win = Gtk.Window(title="Night light")
     win.set_default_size(340, -1)
@@ -176,8 +198,12 @@ def main():
     elif cmd == "toggle":
         toggle()
     elif cmd == "restore":
-        if shutil.which("hyprsunset"):
+        if on_hyprland():
             start_hyprsunset(load())
+        else:
+            start_gammastep(load())
+    elif cmd == "pause":
+        apply({**load(), "enabled": False})
     elif cmd == "resume":
         apply(load())
     elif cmd == "popup":

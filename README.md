@@ -1,4 +1,4 @@
-# setupde: labwc desktop for Void Linux (+ PikaOS Hyprland)
+# setupde: labwc desktop for Void Linux (+ PikaOS Hyprland and labwc)
 
 This turns a fresh (or nearly fresh) Void Linux install into a full, good-looking
 desktop based on the [labwc](https://labwc.github.io) Wayland compositor. Everything
@@ -163,6 +163,76 @@ To have it switch by itself for a game in Lutris: right-click the game → Confi
 If the screen flickers in games with VRR, set `vrr = 0` in `game_look()` in `~/.config/hypr/game.lua`.
 
 Go back to PikaOS's setup with `rm -rf ~/.config/hypr && mv ~/.config/hypr.pikaos-backup-<date> ~/.config/hypr`.
+
+## PikaOS labwc
+
+The same desktop on **labwc** instead of Hyprland: [`pikaos-labwc/`](pikaos-labwc). labwc is simpler
+and steadier than Hyprland. It does title bars, snapping, HDR and VRR itself, without plugins or
+scripts. The panel (dock, hardware info, network, VPN and sound menus, night light, game mode),
+launcher, terminal, notifications and lock screen are the same as in the Hyprland setup.
+It's installed **next to** Hyprland. You pick one on the login screen, and Hyprland and its
+config stay as they are.
+
+```sh
+cd setupde/pikaos-labwc
+./install.sh
+```
+
+Then log out and choose **labwc (setupde)** on the login screen. Plain "labwc" starts it without HDR.
+To go back to Hyprland, log out and choose Hyprland there. What the installer does:
+
+* Installs labwc (0.20 or newer for HDR; PikaOS has 0.20.3) and what it needs: kanshi (monitor),
+  gammastep (night light), swayidle + wlopm (lock and screen off), wlrctl (the dock), wdisplays.
+  It also installs the same apps as the Hyprland setup
+* Adds the login screen entry `/usr/share/wayland-sessions/setupde-labwc.desktop`, which runs
+  `start-labwc`
+* Moves an existing `~/.config/labwc` to `~/.config/labwc.backup-<date>` and installs the new config.
+  Keyboard layout, Qt theme, wallpaper and monitor settings (resolution, refresh rate, scale) come
+  from your Hyprland setup
+* waybar, fuzzel, foot, mako, swaylock and GTK get the same config files as with the Hyprland
+  installer, so both desktops look the same
+
+Windows work like in the Hyprland setup:
+
+| Do this | What happens |
+|---|---|
+| Open an app | It opens at its own size. New windows cascade |
+| `Super+←` / `Super+→` | Snap to the left / right half |
+| `Super+↑` | Big. A half goes to its top quarter, and a top quarter becomes big |
+| `Super+↓` | Back to its own size. A half goes to its bottom quarter. A bottom quarter, or a window at its own size, is minimized |
+| `Super+Alt+←` / `Super+Alt+→` | Left / right third. Press again to put it back |
+| `Super+numpad 1-9` | That part of the screen (7 = top left quarter, 5 = middle, ...) |
+| Drag to a screen edge and let go | Left/right edge: half. Top edge: big. Corner: quarter. A blue preview shows where it goes |
+| Double-click the title bar / `Super+M` | Big ↔ own size |
+| `Super+C` | Own size, centred |
+| Minimize (button, `Super+H`) | Click it in the dock to bring it back |
+| Desktop: right-click / middle-click | Menu / list of all windows |
+| `Super+F1` | List of all shortcuts |
+
+Not in labwc: Arrange (`Super+T`), blur and animations, and the first window doesn't open big by
+itself (press `Super+↑`).
+
+**HDR and VRR:** `start-labwc` starts labwc with the Vulkan renderer, which HDR needs. Like on
+Hyprland, **game mode (`Super+G`) turns HDR on for the whole screen and leaving it turns HDR off**.
+Game mode also hides notifications and pauses the night light. `setupde-hdr on|off|game` works as on
+Hyprland, and it's one setting for both desktops. VRR (G-Sync / FreeSync) is always on for full screen
+windows. If labwc can't start with the Vulkan renderer (that depends on the NVIDIA driver version),
+it starts again with the normal one by itself, and game mode then says HDR isn't available. The logs
+are `~/.local/state/labwc.log` and `labwc.log.vulkan`.
+
+**Games:** labwc scales X11 apps up, so they look a bit soft (the Steam client, for example), and an
+X11 game only sees a 1440x810 screen. Run Wine/Proton games with Wine's Wayland driver instead:
+`PROTON_ENABLE_WAYLAND=1` (in Lutris: Configure → System options → Environment variables; WoW
+already has it). Then the game gets the full 3840x2160, and HDR with `PROTON_ENABLE_HDR=1`. Known
+labwc 0.20 problem: some Wine game windows disappear after Alt+Tab
+([labwc #3615](https://github.com/labwc/labwc/pull/3615)). If that happens with a game, play it in
+the Hyprland session.
+
+Config files: `~/.config/labwc/rc.xml` (keys, snapping, HDR/VRR, title bars), `autostart` (panel,
+idle, night light), `environment` (keyboard layout, dark mode), `themerc-override` (colours) and
+`menu.xml` (desktop menu). `Super+Shift+R` reloads them. The monitor is set in `~/.config/kanshi/config`.
+To remove the labwc desktop: `sudo rm /usr/share/wayland-sessions/setupde-labwc.desktop` and
+`rm -rf ~/.config/labwc`.
 
 ## Before you start
 

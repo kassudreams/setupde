@@ -1,0 +1,13 @@
+# Monitor setup - kanshi applies this when labwc starts and on hotplug.
+# Reference: man 5 kanshi
+#
+# "*" means "whatever port the monitor is on". To target one monitor, run
+# `wlr-randr` to see its name (e.g. DP-1, HDMI-A-1) and use that instead.
+# Scale 2.666667 = a 1440x810 desktop, the same as on Hyprland.
+# Apply changes without logging out:  pkill kanshi; kanshi &
+#
+# VRR (only for full screen windows) and HDR are set in ~/.config/labwc/rc.xml.
+
+profile main {
+	output * mode 3840x2160@119.880Hz scale 2.666667
+}

@@ -1,27 +1,111 @@
 #!/bin/sh
-# HDR on Hyprland (edits ~/.config/hypr/monitors.lua; Hyprland reloads it).
-# HDR is on or off for the whole screen; apps never switch it by themselves.
+# HDR for the whole screen; apps never switch it by themselves.
 #   setupde-hdr game   HDR only while game mode is on (Super+G) - the default
 #   setupde-hdr on     HDR all the time
 #   setupde-hdr off    never HDR, not even in game mode
 #   setupde-hdr        show the current setting
-f="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/monitors.lua"
-look="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/look.lua"
-[ -f "$f" ] || { echo "no $f" >&2; exit 1; }
-set_cm()   { sed -i "s/^\([[:space:]]*cm[[:space:]]*=[[:space:]]*\)\"[^\"]*\"/\1\"$1\"/" "$f"; }
-set_game() { sed -i "s/^\([[:space:]]*hdr_in_game_mode[[:space:]]*=[[:space:]]*\)[a-z]*/\1$1/" "$f"; }
-# older configs let apps switch HDR when they went full screen: never again
-no_auto()  { [ -f "$look" ] && sed -i "s/cm_auto_hdr[[:space:]]*=[[:space:]]*[0-9]/cm_auto_hdr = 0/" "$look"; }
+# The setting is shared by the labwc and Hyprland desktops. labwc: <hdr> in
+# ~/.config/labwc/rc.xml (needs the Vulkan renderer, which start-labwc uses
+# when the graphics driver allows). Hyprland: ~/.config/hypr/monitors.lua.
+# For game mode and start-labwc:
+#   setupde-hdr apply on|off    switch HDR right now (labwc)
+#   setupde-hdr mode            print game / on / off
+#   setupde-hdr session-start   before labwc starts: HDR off unless "on"
+#                               (and always off without Vulkan)
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
+MODE_FILE="$CONF/setupde/hdr-mode"
+RC="$CONF/labwc/rc.xml"
+HYPR_MON="$CONF/hypr/monitors.lua"
+HYPR_LOOK="$CONF/hypr/look.lua"
+NOHDR="${XDG_RUNTIME_DIR:-/tmp}/setupde-no-hdr"
+GAMEMODE_FLAG="${XDG_RUNTIME_DIR:-/tmp}/setupde-gamemode"
+
+note() { notify-send -t 3000 "Display" "$1" 2>/dev/null || echo "$1"; }
+usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+describe() {
+	case "$1" in
+		on)  echo "HDR: always on" ;;
+		off) echo "HDR: off, also in game mode" ;;
+		*)   echo "HDR: on in game mode (Super+G), off otherwise" ;;
+	esac
+}
+
+# The saved setting: the mode file, else what monitors.lua says, else "game"
+get_mode() {
+	m="$(cat "$MODE_FILE" 2>/dev/null)"
+	case "$m" in on|off|game) echo "$m"; return ;; esac
+	if [ -f "$HYPR_MON" ]; then
+		cm="$(sed -n 's/^[[:space:]]*cm[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$HYPR_MON" | head -n1)"
+		game="$(sed -n 's/^[[:space:]]*hdr_in_game_mode[[:space:]]*=[[:space:]]*\([a-z]*\).*/\1/p' "$HYPR_MON" | head -n1)"
+		if [ -n "$cm" ] && [ "$cm" != srgb ]; then echo on; return; fi
+		if [ "$game" = false ]; then echo off; return; fi
+	fi
+	echo game
+}
+
+# Hyprland reads monitors.lua (and reloads it by itself when it changes)
+hypr_save() { # game|on|off
+	[ -f "$HYPR_MON" ] || return 0
+	case "$1" in on) cm=hdr game=true ;; off) cm=srgb game=false ;; *) cm=srgb game=true ;; esac
+	sed -i -e "s/^\([[:space:]]*cm[[:space:]]*=[[:space:]]*\)\"[^\"]*\"/\1\"$cm\"/" \
+	       -e "s/^\([[:space:]]*hdr_in_game_mode[[:space:]]*=[[:space:]]*\)[a-z]*/\1$game/" "$HYPR_MON"
+	# older configs let apps switch HDR when they went full screen: never again
+	[ -f "$HYPR_LOOK" ] && sed -i "s/cm_auto_hdr[[:space:]]*=[[:space:]]*[0-9]/cm_auto_hdr = 0/" "$HYPR_LOOK"
+	return 0
+}
+
+save_mode() { # game|on|off, for both desktops
+	mkdir -p "$(dirname "$MODE_FILE")"
+	echo "$1" >"$MODE_FILE"
+	hypr_save "$1"
+}
+
+set_rc() { [ -f "$RC" ] && sed -i "s|<hdr>[^<]*</hdr>|<hdr>$1</hdr>|" "$RC"; }
+
+# labwc: switch HDR now (yes|no). labwc sets HDR up when an output is
+# configured, so after reloading the config the outputs are configured again.
+lab_apply() {
+	if [ "$1" = yes ] && [ -e "$NOHDR" ]; then
+		note "HDR isn't available in this session: labwc runs without the Vulkan renderer (see ~/.local/state/labwc.log)"
+		return 1
+	fi
+	set_rc "$1"
+	[ -n "${LABWC_PID:-}" ] || return 0
+	labwc --reconfigure >/dev/null 2>&1
+	sleep 0.5
+	for o in $(wlr-randr 2>/dev/null | awk '/^[^ \t]/ { name = $1 } /^[ \t]+Enabled: yes/ { print name }'); do
+		wlr-randr --output "$o" --on >/dev/null 2>&1
+	done
+	return 0
+}
+
 case "${1:-}" in
-	game|auto) no_auto; set_game true;  set_cm srgb; msg="HDR: on in game mode (Super+G), off otherwise" ;;
-	on)        no_auto; set_game true;  set_cm hdr;  msg="HDR: always on" ;;
-	off)       no_auto; set_game false; set_cm srgb; msg="HDR: off, also in game mode" ;;
-	"")   cm="$(sed -n 's/^[[:space:]]*cm[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$f" | head -n1)"
-	      game="$(sed -n 's/^[[:space:]]*hdr_in_game_mode[[:space:]]*=[[:space:]]*\([a-z]*\).*/\1/p' "$f" | head -n1)"
-	      if [ "$cm" != srgb ]; then echo "HDR: always on (cm = $cm)"
-	      elif [ "$game" = false ]; then echo "HDR: off, also in game mode"
-	      else echo "HDR: on in game mode (Super+G), off otherwise"; fi
-	      exit 0 ;;
-	*)    sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+	game|auto|on|off)
+		mode="$1"
+		[ "$mode" = auto ] && mode=game
+		save_mode "$mode"
+		# labwc switches now; Hyprland reloads monitors.lua by itself; a
+		# labwc that isn't running picks it up at the next login
+		if [ -n "${LABWC_PID:-}" ]; then
+			want=no
+			[ "$mode" = on ] && want=yes
+			[ "$mode" = game ] && [ -e "$GAMEMODE_FLAG" ] && want=yes
+			lab_apply "$want" || exit 1
+		fi
+		note "$(describe "$mode")" ;;
+	apply)
+		case "${2:-}" in on) lab_apply yes ;; off) lab_apply no ;; *) usage ;; esac
+		exit $? ;;
+	mode)
+		get_mode ;;
+	session-start)
+		if [ "$(get_mode)" = on ] && [ ! -e "$NOHDR" ]; then set_rc yes; else set_rc no; fi ;;
+	"")
+		describe "$(get_mode)"
+		if [ -n "${LABWC_PID:-}" ] && [ -e "$NOHDR" ]; then
+			echo "(not available in this session: labwc runs without the Vulkan renderer)"
+		fi ;;
+	*)
+		usage ;;
 esac
-notify-send -t 2500 "Display" "$msg" 2>/dev/null || echo "$msg"
+exit 0

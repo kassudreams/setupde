@@ -1,0 +1,52 @@
+# labwc autostart (PikaOS) - run once when labwc starts (sourced by sh).
+# Long-running programs MUST end with '&'.
+
+# Monitor: resolution, refresh rate and scale (~/.config/kanshi/config)
+kanshi >/dev/null 2>&1 &
+
+# Wallpaper: put an image at ~/.config/labwc/wallpaper (any jpg/png) to use it
+if [ -f "$HOME/.config/labwc/wallpaper" ]; then
+	swaybg -m fill -i "$HOME/.config/labwc/wallpaper" >/dev/null 2>&1 &
+else
+	swaybg -c '#1e1e2e' >/dev/null 2>&1 &
+fi
+
+# Panel (the dock in its middle is generated first) and notifications
+command -v setupde-dock >/dev/null && setupde-dock build
+waybar >/dev/null 2>&1 &
+# keeps the dock's pinned icons in sync with open windows
+command -v setupde-dock >/dev/null && setupde-dock watch >/dev/null 2>&1 &
+mako >/dev/null 2>&1 &
+
+# Password prompts for apps that need admin rights (first agent found)
+if ! pgrep -f 'polkit.*agent|hyprpolkitagent|lxpolkit' >/dev/null; then
+	for agent in /usr/lib/hyprpolkitagent/hyprpolkitagent \
+	             /usr/libexec/hyprpolkitagent \
+	             /usr/libexec/polkit-mate-authentication-agent-1 \
+	             /usr/lib/mate-polkit/polkit-mate-authentication-agent-1 \
+	             /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1 \
+	             /usr/libexec/polkit-gnome-authentication-agent-1 \
+	             /usr/lib/x86_64-linux-gnu/libexec/polkit-kde-authentication-agent-1 \
+	             /usr/bin/lxpolkit; do
+		[ -x "$agent" ] && { "$agent" >/dev/null 2>&1 & break; }
+	done
+fi
+
+# Clipboard history (Super+V)
+command -v cliphist >/dev/null && wl-paste --watch cliphist store >/dev/null 2>&1 &
+
+# Night light + brightness with your saved settings (moon icon in the panel)
+command -v setupde-nightlight >/dev/null && setupde-nightlight restore
+
+# A new session starts outside game mode
+command -v setupde-gamemode >/dev/null && setupde-gamemode reset
+
+# Idle: lock after 5 min, screen off after 10 min, lock before suspend.
+# "lock" also answers `loginctl lock-session` (PikaOS's otter tools use it),
+# so the lock screen is always swaylock - type your password, press Enter.
+pkill -x otter-idle 2>/dev/null
+swayidle -w \
+	lock 'pidof swaylock || swaylock -f' \
+	timeout 300 'swaylock -f' \
+	timeout 600 'wlopm --off \*' resume 'wlopm --on \*' \
+	before-sleep 'swaylock -f' >/dev/null 2>&1 &
