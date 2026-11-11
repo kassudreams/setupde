@@ -34,6 +34,12 @@ if [ -n "$nvidia" ]; then
 	# the Hyprland setup (hypr/env.lua)
 	if [ -d /sys/module/nvidia_drm ]; then
 		export __GLX_VENDOR_LIBRARY_NAME=nvidia LIBVA_DRIVER_NAME=nvidia NVD_BACKEND=direct
+		# Full screen games go through the desktop's drawing instead of
+		# straight to the screen ("direct scanout"): with NVIDIA's driver a
+		# Wine game (WoW) can stay frozen after Alt+Tab when that handover
+		# goes wrong. To try without it, put
+		# WLR_SCENE_DISABLE_DIRECT_SCANOUT=0 in ~/.config/labwc/environment
+		[ -n "${WLR_SCENE_DISABLE_DIRECT_SCANOUT:-}" ] || export WLR_SCENE_DISABLE_DIRECT_SCANOUT=1
 	fi
 fi
 

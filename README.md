@@ -223,10 +223,19 @@ are `~/.local/state/labwc.log` and `labwc.log.vulkan`.
 **Games:** labwc scales X11 apps up, so they look a bit soft (the Steam client, for example), and an
 X11 game only sees a 1440x810 screen. Run Wine/Proton games with Wine's Wayland driver instead:
 `PROTON_ENABLE_WAYLAND=1` (in Lutris: Configure → System options → Environment variables; WoW
-already has it). Then the game gets the full 3840x2160, and HDR with `PROTON_ENABLE_HDR=1`. Known
-labwc 0.20 problem: some Wine game windows disappear after Alt+Tab
-([labwc #3615](https://github.com/labwc/labwc/pull/3615)). If that happens with a game, play it in
-the Hyprland session.
+already has it). Then the game gets the full 3840x2160, and HDR with `PROTON_ENABLE_HDR=1`.
+
+**Alt+Tab out of a game** (labwc 0.20 has a known problem: some Wine game windows freeze or disappear
+after Alt+Tab, [labwc #3615](https://github.com/labwc/labwc/pull/3615)):
+
+* In the game's graphics settings use Display Mode **Windowed (Fullscreen)**, not *Fullscreen*. In
+  real fullscreen Wine minimizes the game when it loses focus, and on Wayland the game isn't always
+  told that it's back, so it stays frozen. Windowed (Fullscreen) still fills the screen, with VRR
+* With an NVIDIA card, `start-labwc` turns off "direct scanout" (full screen games go through the
+  desktop's drawing instead of straight to the screen), because that handover can leave a game
+  stuck too. To try it without, put `WLR_SCENE_DISABLE_DIRECT_SCANOUT=0` in
+  `~/.config/labwc/environment` and log in again
+* If a game still freezes, play it in the Hyprland session
 
 Config files: `~/.config/labwc/rc.xml` (keys, snapping, HDR/VRR, title bars), `autostart` (panel,
 idle, night light), `environment` (keyboard layout, dark mode), `themerc-override` (colours) and
