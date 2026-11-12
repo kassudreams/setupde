@@ -5,6 +5,8 @@
 # screen windows. Hyprland also drops blur and animations (hypr/game.lua).
 #   setupde-gamemode            on <-> off
 #   setupde-gamemode on|off     e.g. as Lutris' pre-launch / post-exit script
+#   setupde-gamemode on nohdr   labwc: everything but HDR (setupde-game uses it
+#                               for games in gamescope, which are SDR there)
 #   setupde-gamemode status     panel icon (prints nothing when it's off)
 #   setupde-gamemode reset      labwc autostart: a new session starts outside it
 flag="${XDG_RUNTIME_DIR:-/tmp}/setupde-gamemode"
@@ -12,17 +14,19 @@ flag="${XDG_RUNTIME_DIR:-/tmp}/setupde-gamemode"
 panel() { pkill -RTMIN+10 -x waybar 2>/dev/null; }
 
 # labwc: no compositor scripting, so this script does it all
-lab_set() { # on|off
+lab_set() { # on|off [nohdr]
 	if [ "$1" = on ]; then
 		[ -e "$flag" ] && return 0
-		: >"$flag"
+		if [ "${2:-}" = nohdr ]; then echo nohdr >"$flag"; else : >"$flag"; fi
 		makoctl mode -a do-not-disturb >/dev/null 2>&1
 		setupde-nightlight pause >/dev/null 2>&1
-		[ "$(setupde-hdr mode)" = game ] && setupde-hdr apply on
+		[ "${2:-}" != nohdr ] && [ "$(setupde-hdr mode)" = game ] && setupde-hdr apply on
 	else
 		[ -e "$flag" ] || return 0
+		hdr=yes
+		[ "$(cat "$flag" 2>/dev/null)" = nohdr ] && hdr=no
 		rm -f "$flag"
-		[ "$(setupde-hdr mode)" = game ] && setupde-hdr apply off
+		[ "$hdr" = yes ] && [ "$(setupde-hdr mode)" = game ] && setupde-hdr apply off
 		makoctl mode -r do-not-disturb >/dev/null 2>&1
 		setupde-nightlight resume >/dev/null 2>&1
 	fi
@@ -37,15 +41,15 @@ if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
 		toggle) hyprctl eval 'require("game").toggle()' >/dev/null ;;
 		status) if [ -e "$flag" ]; then echo "󰊴"; else echo; fi ;;
 		reset)  ;; # Hyprland does this itself (game.lua)
-		*)      sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+		*)      sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 	esac
 	exit 0
 fi
 
 case "${1:-toggle}" in
-	on|off) lab_set "$1" ;;
+	on|off) lab_set "$1" "${2:-}" ;;
 	toggle) if [ -e "$flag" ]; then lab_set off; else lab_set on; fi ;;
 	status) if [ -e "$flag" ]; then echo "󰊴"; else echo; fi ;;
 	reset)  rm -f "$flag"; makoctl mode -r do-not-disturb >/dev/null 2>&1; panel ;;
-	*)      sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+	*)      sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

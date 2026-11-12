@@ -131,7 +131,7 @@ fi
 # ---------------------------------------------------------------- scripts
 install_scripts setupde-powermenu setupde-screenshot setupde-clipboard setupde-rebuild-plugins \
 	setupde-dock setupde-sysinfo setupde-nightlight setupde-network setupde-fireface setupde-hdr \
-	setupde-gamemode setupde-plugin-check setupde-snapshot setupde-vpn \
+	setupde-gamemode setupde-game setupde-plugin-check setupde-snapshot setupde-vpn \
 	setupde-audio setupde-snap setupde-keys
 
 # ---------------------------------------------------------------- hyprland config

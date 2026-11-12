@@ -1,0 +1,77 @@
+#!/bin/sh
+# Start a game the setupde way. In Lutris: right-click the game -> Configure
+# -> System options -> Command prefix: setupde-game
+# (with Mullvad: mullvad-exclude setupde-game)
+#
+# - labwc: the game runs inside gamescope, full screen at the monitor's own
+#   resolution, so Alt+Tab only moves gamescope's window and never the game
+#   itself (Wine games can freeze after Alt+Tab on labwc 0.20). Wine uses
+#   gamescope's X server there, and there's no HDR: labwc 0.20 doesn't offer
+#   what gamescope needs for it.
+# - Hyprland (and anything else): the game starts as it always did
+# - game mode is on while the game runs (unless it was on already); for a
+#   game in gamescope without HDR
+#   SETUPDE_GAMESCOPE=0             no gamescope for this game
+#   SETUPDE_GAMESCOPE_ARGS="..."    extra gamescope options
+if [ $# -eq 0 ]; then
+	sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+	exit 1
+fi
+
+use_gamescope=""
+if [ -n "${LABWC_PID:-}" ] && [ "${SETUPDE_GAMESCOPE:-1}" != 0 ] && command -v gamescope >/dev/null; then
+	use_gamescope=1
+fi
+
+# Game mode for the game's run
+flag="${XDG_RUNTIME_DIR:-/tmp}/setupde-gamemode"
+started=""
+if [ ! -e "$flag" ] && command -v setupde-gamemode >/dev/null; then
+	if [ -n "$use_gamescope" ]; then
+		setupde-gamemode on nohdr
+	else
+		setupde-gamemode on
+	fi
+	started=1
+fi
+# shellcheck disable=SC2317 # called by the EXIT trap
+cleanup() {
+	if [ -n "$started" ]; then
+		started=""
+		setupde-gamemode off
+	fi
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+if [ -z "$use_gamescope" ]; then
+	"$@"
+	exit $?
+fi
+
+# The monitor's current mode, e.g. "3840x2160 119.880000"
+mode="$(wlr-randr 2>/dev/null | awk '
+	/^[^ \t]/ { on = 0 }
+	/^[ \t]+Enabled: yes/ { on = 1 }
+	on && /current/ { print $1, $3; exit }')"
+size="${mode%% *}"
+hz="${mode#* }"
+hz="${hz%%.*}"
+opts="--backend wayland -f"
+case "$size" in
+	[0-9]*x[0-9]*)
+		w="${size%x*}"
+		h="${size#*x}"
+		opts="$opts -W $w -H $h -w $w -h $h" ;;
+esac
+case "$hz" in
+	[0-9]*) opts="$opts -r $hz" ;;
+esac
+
+# Wine's Wayland driver is for labwc itself; inside gamescope Wine uses X11
+unset PROTON_ENABLE_WAYLAND
+# shellcheck disable=SC2086 # the options are meant to split into words
+gamescope $opts ${SETUPDE_GAMESCOPE_ARGS:-} -- "$@"
+exit $?

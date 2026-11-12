@@ -32,7 +32,7 @@ LAYOUT=""
 WANT_PACKAGES=1
 
 PKGS=(
-	labwc xwayland wlr-randr kanshi wlopm wlrctl gammastep
+	labwc xwayland wlr-randr kanshi wlopm wlrctl gammastep gamescope
 	xdg-desktop-portal-wlr xdg-desktop-portal-gtk wdisplays nwg-look
 	waybar fuzzel foot mako-notifier
 	swaybg swaylock swayidle
@@ -52,7 +52,7 @@ PKGS=(
 SCRIPTS=(
 	start-labwc setupde-powermenu setupde-screenshot setupde-clipboard
 	setupde-dock setupde-sysinfo setupde-nightlight setupde-network setupde-fireface
-	setupde-hdr setupde-gamemode setupde-snapshot setupde-vpn setupde-audio setupde-keys
+	setupde-hdr setupde-gamemode setupde-game setupde-snapshot setupde-vpn setupde-audio setupde-keys
 )
 
 usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }

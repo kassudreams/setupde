@@ -159,7 +159,8 @@ boot menu first (PikaOS keeps a few).
 turns on VRR (G-Sync / FreeSync) for fullscreen windows and HDR for the whole screen, hides
 notifications and pauses the night light. A green gamepad icon shows in the panel; click it or press `Super+G` again to go back.
 To have it switch by itself for a game in Lutris: right-click the game → Configure → System options
-→ *Pre-launch script* `setupde-gamemode on`, *Post-exit script* `setupde-gamemode off`.
+→ *Command prefix* `setupde-game` (with Mullvad: `mullvad-exclude setupde-game`). Game mode is then on
+while the game runs, in Hyprland and in labwc (see PikaOS labwc).
 If the screen flickers in games with VRR, set `vrr = 0` in `game_look()` in `~/.config/hypr/game.lua`.
 
 Go back to PikaOS's setup with `rm -rf ~/.config/hypr && mv ~/.config/hypr.pikaos-backup-<date> ~/.config/hypr`.
@@ -235,7 +236,21 @@ after Alt+Tab, [labwc #3615](https://github.com/labwc/labwc/pull/3615)):
   desktop's drawing instead of straight to the screen), because that handover can leave a game
   stuck too. To try it without, put `WLR_SCENE_DISABLE_DIRECT_SCANOUT=0` in
   `~/.config/labwc/environment` and log in again
-* If a game still freezes, play it in the Hyprland session
+* **If it still freezes (it did for WoW): run the game inside gamescope.** Install it once
+  (`sudo apt install gamescope`; the labwc installer does that too), then in Lutris: right-click the
+  game → Configure → System options → *Command prefix* `setupde-game` (with Mullvad:
+  `mullvad-exclude setupde-game`). In labwc the game then runs inside gamescope, its own small game
+  compositor, full screen at 3840x2160 with VRR, and Alt+Tab only moves gamescope's window, never
+  the game. In Hyprland the same setting starts the game exactly as before. Game mode is on while
+  the game runs, so remove the old *Pre-launch* / *Post-exit* `setupde-gamemode` scripts if you set
+  them
+  * **No HDR inside gamescope on labwc:** labwc 0.20 doesn't offer the HDR features gamescope
+    needs, so `setupde-game` leaves HDR off for it. For WoW with HDR, play in Hyprland
+  * Battle.net's window looks small inside gamescope (it's drawn at 4K without scaling); WoW itself
+    has its own UI scale
+  * One game without gamescope: add the environment variable `SETUPDE_GAMESCOPE=0` in Lutris
+    (Configure → System options → Environment variables). Extra gamescope options go in
+    `SETUPDE_GAMESCOPE_ARGS`
 
 Config files: `~/.config/labwc/rc.xml` (keys, snapping, HDR/VRR, title bars), `autostart` (panel,
 idle, night light), `environment` (keyboard layout, dark mode), `themerc-override` (colours) and
