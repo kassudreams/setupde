@@ -258,6 +258,67 @@ idle, night light), `environment` (keyboard layout, dark mode), `themerc-overrid
 To remove the labwc desktop: `sudo rm /usr/share/wayland-sessions/setupde-labwc.desktop` and
 `rm -rf ~/.config/labwc`.
 
+## Reinstalling PikaOS
+
+Don't install a new PikaOS on top of the old one: the installer erases the system partition, and
+copying the old settings back would bring the old problems back too. The safe way is a backup to an
+external drive, a clean install, then the setupde installers and only your own files back.
+Your files live in `/home`, which is on the same partition as the system unless you set it up
+separately, so **everything on the disk is erased**, Timeshift snapshots included.
+
+**1. Before: back up**
+
+1. Plug in an external drive with enough space. Best formatted as **Ext4** (Disks → select the
+   partition → ⚙ → Format Partition → Ext4). FAT, exFAT and NTFS lose links and permissions,
+   which Wine/Lutris folders need
+2. Close Brave, Lutris and WoW, then run `setupde-backup /media/$USER/<drive>`
+   (`setupde-backup` alone lists the drives). It copies your whole home folder (caches left out)
+   into `setupde-backup-<computer>-<date>`, saves lists of your apps (apt, Flatpak, Guix) and
+   settings, and checks the copy. `--no-games` leaves out `~/Games` (WoW is ~100 GB, without it you
+   download it again), `--wifi` also saves your Wi-Fi networks. Running it again only copies what
+   changed
+3. Open a few files from the backup to make sure they're there
+4. Write down what isn't in files: your Mullvad account number, your Battle.net login (have the
+   authenticator at hand), and turn on Brave Sync or export your passwords from Brave
+5. Download the PikaOS ISO **only from pika-os.com** and compare its checksum with the one on the
+   download page: `sha256sum pikaos-*.iso`. Write it to a **second** USB stick (not the backup
+   drive) with Disks → ⋮ → Restore Disk Image
+
+**2. Install**
+
+1. **Unplug the backup drive**, so it can't be picked by mistake
+2. Boot from the stick (the boot menu key is usually F11 on MSI, F8 on ASUS, F12 on Gigabyte) and
+   choose the NVMe disk
+3. Choose manual partitioning and make, on the NVMe disk:
+   * EFI: about 1 GB, FAT32, mounted at `/boot/efi`
+   * `/boot`: about 2 GB, ext4, **not** encrypted (the PC needs it to start)
+   * `/`: about 200 GB, **encrypted**
+   * `/home`: the rest, **encrypted**. Next time only `/` gets erased, and your files can stay
+4. If the installer offers one encrypted container (LVM or btrfs) holding both `/` and `/home`,
+   take it: one password at start. Two encrypted partitions work too; give both the same password
+   (it may be asked twice). If manual partitioning can't encrypt, use the automatic install with
+   encryption: encryption matters more than the separate `/home`
+5. Use a long encryption password and write it down somewhere safe. **Without it the data can't be
+   recovered.** Create the same user name as before, so Lutris finds your games where they were
+
+**3. After**
+
+1. `sudo apt update && sudo apt full-upgrade`, then restart
+2. Set up the desktops:
+   ```sh
+   git clone https://github.com/kassudreams/setupde.git
+   cd setupde/pikaos-hyprland && ./install.sh
+   cd ../pikaos-labwc && ./install.sh
+   ```
+3. Plug the backup drive in and run `setupde-backup restore /media/$USER/<drive>` **before**
+   opening Brave or Lutris. It brings back your folders (Documents, Pictures, Games, ...), Lutris
+   with WoW and its settings, Brave, your SSH/GPG keys and the setupde settings (dock, night light,
+   HDR). Nothing is deleted, and everything else stays in the backup to copy by hand
+4. `setupde-fireface setup` (Genelecs), `setupde-vpn install` (Mullvad), `setupde-snapshot setup`
+   (snapshots before updates). Flatpak and Guix apps: see the lists in the backup's `lists/`, and
+   `RESTORE.txt` there for Wi-Fi
+5. Keep the backup drive as it is until everything works
+
 ## Before you start
 
 You need a working Void install with:

@@ -53,6 +53,7 @@ SCRIPTS=(
 	start-labwc setupde-powermenu setupde-screenshot setupde-clipboard
 	setupde-dock setupde-sysinfo setupde-nightlight setupde-network setupde-fireface
 	setupde-hdr setupde-gamemode setupde-game setupde-snapshot setupde-vpn setupde-audio setupde-keys
+	setupde-backup
 )
 
 usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0; }

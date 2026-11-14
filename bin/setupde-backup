@@ -1,0 +1,267 @@
+#!/bin/bash
+# Back up your files before reinstalling PikaOS, and bring them back after.
+#
+#   setupde-backup FOLDER [--no-games] [--wifi]
+#        copy your home folder to FOLDER on an external drive (into
+#        setupde-backup-<computer>-<date>), plus lists of your apps.
+#        Running it again the same day only copies what changed.
+#        --no-games   leave out ~/Games (WoW is ~100 GB; without it, it has
+#                     to be downloaded again)
+#        --wifi       also save the Wi-Fi networks (with their passwords)
+#   setupde-backup restore FOLDER
+#        after the reinstall: bring back your files, Lutris (WoW and its
+#        settings), Brave, SSH/GPG keys and the setupde settings
+#   setupde-backup       show the drives you can back up to
+#
+# Best on a drive formatted as ext4 (Disks -> format the partition -> Ext4):
+# FAT, exFAT and NTFS can't keep links and permissions.
+set -u
+
+STAMP="$(date +%Y%m%d)"
+HOST="$(hostname 2>/dev/null || cat /etc/hostname 2>/dev/null || echo pc)"
+
+# Never needed again after a reinstall (rebuilt or downloaded by themselves)
+EXCLUDES=(
+	/.cache/ /.local/share/Trash/ "/.var/app/*/cache/" /.local/share/flatpak/
+	/.nv/ /.local/share/lutris/runtime/
+)
+
+# What `restore` brings back (relative to the home folder)
+RESTORE_ITEMS=(
+	Desktop Documents Downloads Music Pictures Videos Games
+	.ssh .gnupg
+	.config/BraveSoftware
+	.config/lutris .local/share/lutris
+	.config/setupde
+)
+
+c_blue=$'\e[1;34m'; c_yellow=$'\e[1;33m'; c_red=$'\e[1;31m'; c_off=$'\e[0m'
+step() { printf '\n%s==>%s %s\n' "$c_blue" "$c_off" "$*"; }
+warn() { printf '%s!!%s  %s\n' "$c_yellow" "$c_off" "$*"; }
+die()  { printf '%sxx%s  %s\n' "$c_red" "$c_off" "$*" >&2; exit 1; }
+usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
+ask()  { local a; read -r -p "$1 [y/N] " a || return 1; case "$a" in [yYkK]*) return 0 ;; esac; return 1; }
+
+human() { numfmt --to=iec --suffix=B "$1" 2>/dev/null || echo "$1 bytes"; }
+
+drives() {
+	local d found=0
+	for d in "/media/$USER"/* "/run/media/$USER"/*; do
+		[ -d "$d" ] || continue
+		found=1
+		printf '    %s   (%s free, %s)\n' "$d" \
+			"$(df -h --output=avail "$d" 2>/dev/null | tail -n1 | tr -d ' ')" \
+			"$(findmnt -n -o FSTYPE --target "$d" 2>/dev/null)"
+	done
+	[ "$found" = 1 ] || echo "    (none - plug the drive in and open it once in the file manager)"
+}
+
+# Apps that keep changing their files while they run
+running_apps() {
+	pgrep -u "$(id -u)" -a -i -f 'brave|/lutris|wineserver|battle\.net|wow\.exe' 2>/dev/null |
+		grep -v -i 'setupde-backup' || true
+}
+
+check_apps() {
+	local apps
+	apps="$(running_apps)"
+	[ -z "$apps" ] && return 0
+	warn "these are still running; close them first so their files are complete:"
+	printf '%s\n' "$apps" | cut -c1-100 | sed 's/^/      /'
+	ask "Continue anyway?" || exit 1
+}
+
+# ---------------------------------------------------------------- backup
+backup() {
+	local target="" no_games=0 wifi=0 arg
+	for arg in "$@"; do
+		case "$arg" in
+			--no-games) no_games=1 ;;
+			--wifi) wifi=1 ;;
+			-*) die "unknown option: $arg" ;;
+			*) [ -z "$target" ] || die "only one folder, please"; target="$arg" ;;
+		esac
+	done
+	[ -n "$target" ] || { usage; exit 1; }
+	[ -d "$target" ] || die "$target isn't a folder (is the drive plugged in?)"
+	[ -w "$target" ] || die "can't write to $target"
+	target="$(cd "$target" && pwd)"
+
+	# the reinstall erases this disk: a backup on it would go too
+	if [ "$(stat -c %d "$target")" = "$(stat -c %d "$HOME")" ]; then
+		die "$target is on the same disk as your home folder - the reinstall would erase it too. Use an external drive."
+	fi
+
+	local fstype opts
+	fstype="$(findmnt -n -o FSTYPE --target "$target" 2>/dev/null)"
+	opts=(-aHx)
+	case "$fstype" in
+		vfat|exfat|ntfs|ntfs3|fuseblk|msdos)
+			warn "the drive is $fstype: links and permissions can't be kept there."
+			warn "Your files are fine, but Wine/Lutris folders may not work when copied back."
+			warn "For a complete backup, format the drive as Ext4 in Disks first."
+			ask "Back up to $fstype anyway?" || exit 1
+			opts=(-rtx --modify-window=2) ;;
+	esac
+	if [ "$no_games" = 1 ]; then EXCLUDES+=(/Games/); fi
+	local ex=() e
+	for e in "${EXCLUDES[@]}"; do ex+=(--exclude="$e"); done
+
+	check_apps
+
+	local dest="$target/setupde-backup-$HOST-$STAMP"
+	mkdir -p "$dest/home" "$dest/lists" || die "couldn't create $dest"
+
+	step "Checking how much has to be copied"
+	local need avail
+	need="$(rsync "${opts[@]}" "${ex[@]}" --dry-run --stats --no-human-readable "$HOME/" "$dest/home/" 2>/dev/null |
+		sed -n 's/^Total transferred file size: \([0-9,]*\).*/\1/p' | tr -d ,)"
+	avail="$(df -B1 --output=avail "$target" | tail -n1 | tr -d ' ')"
+	need="${need:-0}"
+	echo "    to copy: $(human "$need"), free on the drive: $(human "$avail")"
+	if [ "$need" -gt "$avail" ]; then
+		die "not enough space on the drive. Free some space, use a bigger drive, or try --no-games."
+	fi
+
+	step "Copying your home folder to $dest/home"
+	rsync "${opts[@]}" "${ex[@]}" --info=progress2 "$HOME/" "$dest/home/"
+	local status=$?
+	case "$status" in
+		0) ;;
+		23|24) warn "some files couldn't be copied or vanished while copying (rsync $status); see below" ;;
+		*) die "copying failed (rsync $status). Is the drive still connected?" ;;
+	esac
+
+	step "Saving lists of your apps and settings to $dest/lists"
+	apt-mark showmanual >"$dest/lists/apt-packages.txt" 2>/dev/null || true
+	command -v flatpak >/dev/null &&
+		flatpak list --app --columns=application,name >"$dest/lists/flatpaks.txt" 2>/dev/null
+	command -v guix >/dev/null &&
+		guix package --export-manifest >"$dest/lists/guix-manifest.scm" 2>/dev/null
+	lsblk -f >"$dest/lists/disks.txt" 2>/dev/null || true
+	cp /etc/fstab "$dest/lists/fstab.txt" 2>/dev/null || true
+	command -v nmcli >/dev/null &&
+		nmcli -t -f NAME,TYPE connection show >"$dest/lists/networks.txt" 2>/dev/null
+	systemctl --user list-unit-files --state=enabled --no-pager >"$dest/lists/user-services.txt" 2>/dev/null || true
+	{
+		echo "HDR mode: $(setupde-hdr mode 2>/dev/null || echo unknown)"
+		local aux
+		aux="$(grep -o 'AUX[0-9]*' "$HOME/.config/pipewire/pipewire.conf.d/60-setupde-genelec-aes.conf" 2>/dev/null | head -n1 | tr -dc 0-9)"
+		[ -n "$aux" ] && echo "Fireface AES output: channels $((aux + 1))-$((aux + 2))  (setupde-fireface setup $((aux + 1)))"
+	} >"$dest/lists/setupde.txt"
+	for e in "$dest"/lists/*; do [ -s "$e" ] && echo "    ${e##*/}"; done
+
+	if [ "$wifi" = 1 ]; then
+		step "Saving the Wi-Fi networks (asks for your password)"
+		if sudo cp -a /etc/NetworkManager/system-connections "$dest/wifi"; then
+			sudo chown -R "$(id -u):$(id -g)" "$dest/wifi"
+			chmod -R go-rwx "$dest/wifi"
+			warn "$dest/wifi contains your Wi-Fi passwords: keep the drive safe"
+		else
+			warn "couldn't save the Wi-Fi networks"
+		fi
+	fi
+
+	write_restore_txt "$dest"
+
+	step "Checking the backup"
+	local missing
+	missing="$(rsync "${opts[@]}" "${ex[@]}" --dry-run --itemize-changes "$HOME/" "$dest/home/" 2>/dev/null |
+		grep -v '^\.d' | grep -v '/$' || true)"
+	if [ -z "$missing" ]; then
+		echo "    everything is in the backup"
+	else
+		warn "$(printf '%s\n' "$missing" | wc -l) file(s) differ from the backup (changed while copying, or couldn't be read):"
+		printf '%s\n' "$missing" | head -n 15 | sed 's/^/      /'
+		warn "Run the same command again to copy them."
+	fi
+
+	echo
+	printf '%sDone.%s %s files, %s in\n    %s\n' "$c_blue" "$c_off" \
+		"$(find "$dest/home" -type f 2>/dev/null | wc -l)" "$(du -sh "$dest" 2>/dev/null | cut -f1)" "$dest"
+	echo "Open a few of your files from there to check them, then unplug the drive"
+	echo "before you start the reinstall. What to do afterwards: $dest/RESTORE.txt"
+}
+
+write_restore_txt() {
+	cat >"$1/RESTORE.txt" <<EOF
+setupde backup of $HOST, $(date '+%Y-%m-%d %H:%M')
+
+home/    your home folder (caches left out)
+lists/   your apps (apt, Flatpak, Guix), disks, networks, setupde settings
+wifi/    Wi-Fi networks with passwords (only with --wifi)
+
+After reinstalling PikaOS (create the same user name as before, so Lutris
+finds your games in the same place):
+  1. sudo apt update && sudo apt full-upgrade, then restart
+  2. git clone https://github.com/kassudreams/setupde.git
+     cd setupde/pikaos-hyprland && ./install.sh
+     cd ../pikaos-labwc && ./install.sh
+  3. setupde-backup restore "$1"
+  4. setupde-fireface setup        (Genelecs, see lists/setupde.txt)
+     setupde-vpn install           (Mullvad: needs your account number)
+     setupde-snapshot setup        (Timeshift snapshots before updates)
+  5. Flatpak apps: see lists/flatpaks.txt
+     Guix: guix package -m lists/guix-manifest.scm
+     Wi-Fi: sudo cp wifi/* /etc/NetworkManager/system-connections/
+            sudo nmcli connection reload
+Anything else is in home/ - copy it back by hand if you miss it.
+EOF
+}
+
+# ---------------------------------------------------------------- restore
+restore() {
+	local src="${1:-}"
+	[ -n "$src" ] || { usage; exit 1; }
+	[ -d "$src" ] || die "$src isn't a folder (is the drive plugged in?)"
+	# the drive folder instead of the backup itself: take the newest backup on it
+	if [ ! -d "$src/home" ]; then
+		local b newest=""
+		for b in "$src"/setupde-backup-*/home; do # sorted: the last is the newest
+			[ -d "$b" ] && newest="${b%/home}"
+		done
+		[ -n "$newest" ] || die "no setupde backup in $src"
+		src="$newest"
+	fi
+	src="$(cd "$src" && pwd)"
+	echo "Backup: $src"
+	echo "This copies these back into your home folder (nothing gets deleted):"
+	local item have=()
+	for item in "${RESTORE_ITEMS[@]}"; do
+		if [ -e "$src/home/$item" ]; then
+			have+=("$item")
+			printf '    %-24s %s\n' "$item" "$(du -sh "$src/home/$item" 2>/dev/null | cut -f1)"
+		fi
+	done
+	[ "${#have[@]}" -gt 0 ] || die "nothing to restore in $src/home"
+	check_apps
+	ask "Restore these now?" || exit 1
+
+	local failed=0
+	for item in "${have[@]}"; do
+		step "$item"
+		mkdir -p "$HOME/$(dirname "$item")"
+		rsync -aH --info=progress2 "$src/home/$item" "$HOME/$(dirname "$item")/" || failed=1
+	done
+	[ "$failed" = 0 ] || warn "some files couldn't be copied, see above"
+
+	echo
+	printf '%sDone.%s Everything else is still in %s/home.\n' "$c_blue" "$c_off" "$src"
+	echo "Still to do:"
+	local ff
+	ff="$(sed -n 's/.*(\(setupde-fireface setup [0-9]*\)).*/\1/p' "$src/lists/setupde.txt" 2>/dev/null)"
+	echo "    ${ff:-setupde-fireface setup}"
+	echo "    setupde-vpn install"
+	echo "    setupde-snapshot setup"
+	[ -s "$src/lists/flatpaks.txt" ] && echo "    Flatpak apps: $src/lists/flatpaks.txt"
+	[ -s "$src/lists/guix-manifest.scm" ] && echo "    Guix: guix package -m $src/lists/guix-manifest.scm"
+	[ -d "$src/wifi" ] && echo "    Wi-Fi: see $src/RESTORE.txt"
+	return 0
+}
+
+case "${1:-}" in
+	"")             usage; echo; echo "Drives:"; drives; exit 1 ;;
+	-h|--help)      usage ;;
+	restore)        shift; restore "$@" ;;
+	*)              backup "$@" ;;
+esac
